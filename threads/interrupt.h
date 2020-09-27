@@ -7,6 +7,13 @@
 /* Interrupts on or off? */
 enum intr_level 
   {
+    /* "enum" is to enumrate names
+       It is kind of like
+         #define INTR_OFF 0
+         #define INTR_OFF 1
+       but it can be used by invoking
+         enum intr_level xxxx
+       (Comment by Haoran Dang) */
     INTR_OFF,             /* Interrupts disabled. */
     INTR_ON               /* Interrupts enabled. */
   };

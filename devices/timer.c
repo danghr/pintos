@@ -70,8 +70,13 @@ timer_calibrate (void)
 int64_t
 timer_ticks (void) 
 {
+  /* Disable the interrupts to make sure that the operation of
+     getting the ticks is atomic (i.e. cannot be interrupted)
+     (Comment by Haoran Dang) */
   enum intr_level old_level = intr_disable ();
   int64_t t = ticks;
+  /* Restore the interrupt status
+     (Comment by Haoran Dang) */
   intr_set_level (old_level);
   return t;
 }
@@ -89,9 +94,22 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 {
+  /* ORIGINAL IMPLEMENTATION
+     Record the tick count of the starting time
+     (Comment by Haoran Dang) */
   int64_t start = timer_ticks ();
 
+  /* Equivalent to
+       if (intr_get_level () == INTR_ON) { } 
+       else { 
+         PANIC ("assertion `%s' failed.", "intr_get_level () == INTR_ON"); 
+       }
+     (Comment by Haoran Dang) */
   ASSERT (intr_get_level () == INTR_ON);
+
+  /* ORIGINAL IMPLEMENTATION
+     Yield until the elapsed ticks is more than needed
+     (Comment by Haoran Dang) */
   while (timer_elapsed (start) < ticks) 
     thread_yield ();
 }
