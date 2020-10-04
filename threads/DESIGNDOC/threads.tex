@@ -1,0 +1,89 @@
+% VLDB template version of 2020-03-05 enhances the ACM template, version 1.7.0:
+% https://www.acm.org/publications/proceedings-template
+% The ACM Latex guide provides further information about the ACM template
+
+\documentclass[sigconf, nonacm]{acmart}
+\usepackage{amsmath, amsfonts, amsthm}
+\usepackage{url}
+\usepackage{makecell}
+\usepackage{multirow}
+\usepackage{longtable}
+\usepackage{verbatim}
+
+\begin{document}
+    \title{Design Document of Pintos \\ Project 1: Threads}
+
+    %%
+    %% The "author" command and its associated commands are used to define the authors and their affiliations.
+    \author{Tianyi Zhang}
+    \affiliation{%
+        \institution{School of Information Science and Technology}
+        \state{20185332??}
+    }
+    \email{zhangty2@shanghaitech.edu.cn}
+    \author{Haoran Dang}
+    \affiliation{%
+        \institution{School of Information Science and Technology}
+        \state{2018533259}
+    }
+    \email{danghr@shanghaitech.edu.cn}
+
+    \maketitle
+
+    %%
+    %% If you have any preliminary comments on your submission, notes for the
+    %% TAs, or extra credit, please give them here.
+    \section*{Preliminaries}
+
+        %%
+        %% Please cite any offline or online sources you consulted while
+        %% preparing your submission, other than the Pintos documentation, course
+        %% text, lecture notes, and course staff.
+        \subsection*{Acknowledgements}
+
+            \begin{itemize}
+                \item \url{https://www.cnblogs.com/laiy/p/pintos_project1_thread.html}: We read the passage to get familiar with current code structure and how it works. 
+                \item \url{https://www.runoob.com/cprogramming/c-enum.html}: We read it to understand \texttt{enum} in the code. 
+            \end{itemize} 
+    
+    \section{Alarm Clock}
+    
+        \subsection{Data Structures}
+        
+            \subsubsection{Copy here the declaration of each new or changed `struct' or `struct' member, global or static variable, `typedef', or enumeration.  Identify the purpose of each in 25 words or less. } 
+            
+                \begin{itemize}
+                    \item \texttt{int64\_t sleeping\_ticks} in \texttt{struct thread}: a counter of remaining sleeping ticks. 
+                \end{itemize}
+        
+        \subsection{Algorithms}
+        
+            \subsubsection{Briefly describe what happens in a call to \texttt{timer\_sleep()}, including the effects of the timer interrupt handler. }
+                When \texttt{timer\_sleep} is invoked, it set a counter inside the thread as the countdown of remaining sleeping ticks, and calls \texttt{thread\_block} to avoid it from running. 
+            
+                Then in timer interrupt (which should be called in each tick), we check this status of all threads by using \texttt{thread\_foreach}. In the counter of these threads, \texttt{0} is for not sleeping and positive number stands for the remaining ticks.
+            
+                We just simply skip the threads with counter value \texttt{0} and minus the counter by 1 of all remaining threads. When we find that the counter of a thread reaches \texttt{0}, we unblock the thread with \texttt{thread\_unblock}, which will unblock it and put it into the ready list. 
+            
+            \subsubsection{What steps are taken to minimize the amount of time spent in the timer interrupt handler? }
+                
+        
+        \subsection{Synchronization}
+        
+            \subsubsection{How are race conditions avoided when multiple threads call \texttt{timer\_sleep()} simultaneously? }
+            
+            \subsubsection{How are race conditions avoided when a timer interrupt occurs during a call to \texttt{timer\_sleep()}? }
+            Inspired by function \\\texttt{timer\_ticks}, we can use 
+            \begin{verbatim}
+enum intr_level old_level = intr_disable ();
+...
+intr_set_level (old_level);\end{verbatim}
+            to ensure an atomic operation. First we call \texttt{intr\_disable}, which will make the process uninterruptible and returns the old status. Then we do our operations, and since the process cannot be interrupted, the operations are atomic. Finally, we restore the interrupt status by \texttt{intr\_set\_level}. 
+        
+        \subsection{Rationale}
+            
+            \subsubsection{Why did you choose this design? In what ways is it superior to another design you considered? }
+                \texttt{thread\_foreach}, \texttt{thread\_block} and \texttt{thread\_unblock} is mentioned in the project guide. 
+
+\end{document}
+\endinput
