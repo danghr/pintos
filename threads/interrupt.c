@@ -70,8 +70,7 @@ intr_get_level (void)
      value off the stack into `flags'.  See [IA32-v2b] "PUSHF"
      and "POP" and [IA32-v3a] 5.8.1 "Masking Maskable Hardware
      Interrupts". */
-  /* Here it uses assemble code 
-     (Comment by Haoran Dang) */
+  /* Here it uses assemble code  */
   asm volatile ("pushfl; popl %0" : "=g" (flags));
 
   return flags & FLAG_IF ? INTR_ON : INTR_OFF;

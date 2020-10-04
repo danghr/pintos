@@ -117,6 +117,24 @@ thread_start (void)
   sema_down (&idle_started);
 }
 
+/* MODIFIED
+   Function to monitor the function of all threads, find the 
+   ones which should finish sleeping and put them into the
+   ready list */
+void
+thread_sleep_monitor (struct thread *t, void *aux UNUSED)
+{
+  /* Check it is a legal number */
+  ASSERT (t->sleeping_ticks >= 0);
+
+  if (t->status == THREAD_BLOCKED && t->sleeping_ticks > 0)
+  {
+    t->sleeping_ticks--;
+    if (t->sleeping_ticks == 0)
+      thread_unblock(t);
+  }
+}
+
 /* Called by the timer interrupt handler at each timer tick.
    Thus, this function runs in an external interrupt context. */
 void
@@ -137,6 +155,13 @@ thread_tick (void)
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
+  
+  /* MODIFICATION
+     Add an operation of all threads to check and update the 
+     sleeping status */
+  enum intr_level old_level = intr_disable ();
+  thread_foreach(thread_sleep_monitor, NULL);
+  intr_set_level (old_level);
 }
 
 /* Prints thread statistics. */
@@ -463,6 +488,10 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
+
+  /* MODIFICATION
+     Ensure sleeping_ticks == 0 when the thread is initialized */
+  t->sleeping_ticks = 0;
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);

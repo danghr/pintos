@@ -100,6 +100,10 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
+
+    /* MODIFICATION
+       Counter of remaining sleeping ticks */
+    int64_t sleeping_ticks;
   };
 
 /* If false (default), use round-robin scheduler.
@@ -110,6 +114,7 @@ extern bool thread_mlfqs;
 void thread_init (void);
 void thread_start (void);
 
+void thread_sleep_monitor (struct thread *t, void *aux UNUSED);
 void thread_tick (void);
 void thread_print_stats (void);
 

@@ -71,12 +71,10 @@ int64_t
 timer_ticks (void) 
 {
   /* Disable the interrupts to make sure that the operation of
-     getting the ticks is atomic (i.e. cannot be interrupted)
-     (Comment by Haoran Dang) */
+     getting the ticks is atomic (i.e. cannot be interrupted) */
   enum intr_level old_level = intr_disable ();
   int64_t t = ticks;
-  /* Restore the interrupt status
-     (Comment by Haoran Dang) */
+  /* Restore the interrupt status */
   intr_set_level (old_level);
   return t;
 }
@@ -94,24 +92,20 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 {
-  /* ORIGINAL IMPLEMENTATION
-     Record the tick count of the starting time
-     (Comment by Haoran Dang) */
-  int64_t start = timer_ticks ();
-
-  /* Equivalent to
-       if (intr_get_level () == INTR_ON) { } 
-       else { 
-         PANIC ("assertion `%s' failed.", "intr_get_level () == INTR_ON"); 
-       }
-     (Comment by Haoran Dang) */
   ASSERT (intr_get_level () == INTR_ON);
 
-  /* ORIGINAL IMPLEMENTATION
-     Yield until the elapsed ticks is more than needed
-     (Comment by Haoran Dang) */
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+  /* MODIFICATION
+     Note that the ticks can be 0 or negative */
+  if(ticks <= 0)
+    return ;
+  
+  /* MODIFICATION
+     Set the counter of the sleeping thread and block it */
+  enum intr_level old_level = intr_disable ();
+  struct thread *t = thread_current();
+  t->sleeping_ticks = ticks;
+  thread_block ();
+  intr_set_level (old_level);
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -189,6 +183,11 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
+  /* MODIFICATION
+     Add an operation of all threads to check and update the 
+     sleeping status */
+  thread_foreach(thread_sleep_monitor, NULL);
+  /* PROBLEM: What does void *aux mean? */
   thread_tick ();
 }
 
