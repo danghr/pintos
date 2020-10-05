@@ -63,7 +63,7 @@
             
                 Then in timer interrupt (which should be called in each tick), we check this status of all threads by using \texttt{thread\_foreach}. In the counter of these threads, \texttt{0} is for not sleeping and positive number stands for the remaining ticks.
             
-                We just simply skip the threads with counter value \texttt{0} and minus the counter by 1 of all remaining threads. When we find that the counter of a thread reaches \texttt{0}, we unblock the thread with \texttt{thread\_unblock}, which will unblock it and put it into the ready list. 
+                We just simply skip the threads with counter value \texttt{0} and subtract the counter by 1 of all remaining threads. When we find that the counter of a thread reaches \texttt{0}, we unblock the thread with \texttt{thread\_unblock}, which will unblock it and put it into the ready list. 
             
             \subsubsection{What steps are taken to minimize the amount of time spent in the timer interrupt handler? }
                 
