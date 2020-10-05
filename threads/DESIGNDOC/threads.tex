@@ -10,15 +10,24 @@
 \usepackage{longtable}
 \usepackage{verbatim}
 
+% Allow URL Breakline
+\def\UrlBreaks{\do\A\do\B\do\C\do\D\do\E\do\F\do\G\do\H\do\I\do\J
+\do\K\do\L\do\M\do\N\do\O\do\P\do\Q\do\R\do\S\do\T\do\U\do\V
+\do\W\do\X\do\Y\do\Z\do\[\do\\\do\]\do\^\do\_\do\`\do\a\do\b
+\do\c\do\d\do\e\do\f\do\g\do\h\do\i\do\j\do\k\do\l\do\m\do\n
+\do\o\do\p\do\q\do\r\do\s\do\t\do\u\do\v\do\w\do\x\do\y\do\z
+\do\.\do\@\do\\\do\/\do\!\do\_\do\|\do\;\do\>\do\]\do\)\do\,
+\do\?\do\'\do+\do\=\do\#}
+
 \begin{document}
-    \title{Design Document of Pintos \\ Project 1: Threads}
+    \title{CS 130 Project 1: Threads\\Design Document}
 
     %%
     %% The "author" command and its associated commands are used to define the authors and their affiliations.
     \author{Tianyi Zhang}
     \affiliation{%
         \institution{School of Information Science and Technology}
-        \state{20185332??}
+        \state{2018533074}
     }
     \email{zhangty2@shanghaitech.edu.cn}
     \author{Haoran Dang}
@@ -30,60 +39,170 @@
 
     \maketitle
 
-    %%
-    %% If you have any preliminary comments on your submission, notes for the
-    %% TAs, or extra credit, please give them here.
-    \section*{Preliminaries}
+    \setcounter{section}{-1}
+
+    \section{Preliminaries}
+        %%
+        %% If you have any preliminary comments on your submission, notes for the
+        %% TAs, or extra credit, please give them here.
+        \subsection{Preliminary Comments}
+
+        No preliminary comment for this project. 
 
         %%
         %% Please cite any offline or online sources you consulted while
         %% preparing your submission, other than the Pintos documentation, course
         %% text, lecture notes, and course staff.
-        \subsection*{Acknowledgements}
-
+        \subsection{Acknowledgements}
+        
             \begin{itemize}
-                \item \url{https://www.cnblogs.com/laiy/p/pintos_project1_thread.html}: We read the passage to get familiar with current code structure and how it works. 
-                \item \url{https://www.runoob.com/cprogramming/c-enum.html}: We read it to understand \texttt{enum} in the code. 
+                \item \url{https://www.cnblogs.com/laiy/p/pintos_project1_thread.html}: To help get familiar with current code structure and how it works. 
+                \item \url{https://www.runoob.com/cprogramming/c-enum.html}: To understand \texttt{enum} in the code. 
             \end{itemize} 
     
     \section{Alarm Clock}
     
         \subsection{Data Structures}
         
-            \subsubsection{Copy here the declaration of each new or changed `struct' or `struct' member, global or static variable, `typedef', or enumeration.  Identify the purpose of each in 25 words or less. } 
+            \subsubsection{Copy here the declaration of each new or changed `\texttt{struct}' or `\texttt{struct}' member, global or static variable, `\texttt{typedef}', or enumeration. Identify the purpose of each in 25 words or less. } 
             
                 \begin{itemize}
-                    \item \texttt{int64\_t sleeping\_ticks} in \texttt{struct thread}: a counter of remaining sleeping ticks. 
+                    \item In file \texttt{threads/threads.h}
+\begin{verbatim}
+struct thread
+  {
+    ...
+    /* A counter of remaining sleeping ticks */
+    int64_t sleeping_ticks;
+    ...
+  }\end{verbatim}
                 \end{itemize}
         
         \subsection{Algorithms}
         
             \subsubsection{Briefly describe what happens in a call to \texttt{timer\_sleep()}, including the effects of the timer interrupt handler. }
-                When \texttt{timer\_sleep} is invoked, it set a counter inside the thread as the countdown of remaining sleeping ticks, and calls \texttt{thread\_block} to avoid it from running. 
+                When \texttt{timer\_slee\\p} is invoked, it set a counter inside the thread as a countdown of remaining sleeping ticks, and calls \texttt{thread\_block} to avoid it from running. In the counter, 0 stands for not sleeping and positive number stands for the remaining ticks.
             
-                Then in timer interrupt (which should be called in each tick), we check this status of all threads by using \texttt{thread\_foreach}. In the counter of these threads, \texttt{0} is for not sleeping and positive number stands for the remaining ticks.
+                In each tick, timer interrupt is called, in which the total tick counters of the OS \texttt{ticks}, of the idle thread \texttt{idle\_ticks}, and of the kernel thread \texttt{kernel\_ticks} are updated. Then, the sleeping status of all threads is checked by calling \texttt{thread\_sleep\_monitor} through \texttt{thread\_foreach}, which will subtract the counter by 1 of all sleeping threads. When a counter reaches 0, its thread is unblocked by using \texttt{thread\_unblock}, which will put it into the ready list. 
             
-                We just simply skip the threads with counter value \texttt{0} and subtract the counter by 1 of all remaining threads. When we find that the counter of a thread reaches \texttt{0}, we unblock the thread with \texttt{thread\_unblock}, which will unblock it and put it into the ready list. 
-            
-            \subsubsection{What steps are taken to minimize the amount of time spent in the timer interrupt handler? }
-                
+            \subsubsection{What steps are taken to minimize the amount of time spent in the timer interrupt handler? } \label{Minimize timer interrupt handler}
+                In the handler, only one operation
+                \begin{verbatim}
+thread_foreach (&thread_sleep_monitor, t);
+                \end{verbatim}
+                is added. Since Pintos does not maintain a list of sleeping items, and it is easy to check whether a thread is sleeping simply using \texttt{status} and \texttt{sleeping\_ticks}, it does not require much time even if we look into all the threads. 
         
         \subsection{Synchronization}
         
-            \subsubsection{How are race conditions avoided when multiple threads call \texttt{timer\_sleep()} simultaneously? }
-            
-            \subsubsection{How are race conditions avoided when a timer interrupt occurs during a call to \texttt{timer\_sleep()}? }
-            Inspired by function \\\texttt{timer\_ticks}, we can use 
+            \subsubsection{How are race conditions avoided when multiple threads call \texttt{timer\_sleep()} simultaneously? } \label{Race Conditions of Threads}
+                Inspired by function \\\texttt{timer\_ticks}, we can use 
             \begin{verbatim}
 enum intr_level old_level = intr_disable ();
 ...
-intr_set_level (old_level);\end{verbatim}
-            to ensure an atomic operation. First we call \texttt{intr\_disable}, which will make the process uninterruptible and returns the old status. Then we do our operations, and since the process cannot be interrupted, the operations are atomic. Finally, we restore the interrupt status by \texttt{intr\_set\_level}. 
+intr_set_level (old_level);
+\end{verbatim}
+                to ensure a non-interruptible operation on the current thread. 
+                
+                First we call \texttt{intr\_disable}, which will make the process uninterruptible and returns the old status. Then we do our operations which are now uninterruptible. Finally, we restore the interrupt status by \texttt{intr\_set\_level}. 
+
+                Thus, since the thread is uninterruptible, we can ensure the value of \texttt{sleeping\_ticks} is correct when the thread is blocked. 
+            
+            \subsubsection{How are race conditions avoided when a timer interrupt occurs during a call to \texttt{timer\_sleep()}? }
+                Similar to \ref{Race Conditions of Threads}, all the operations in \texttt{timer\_sleep()} is uninterruptible, so the race condition of interrupts is avoided. 
         
         \subsection{Rationale}
             
             \subsubsection{Why did you choose this design? In what ways is it superior to another design you considered? }
-                \texttt{thread\_foreach}, \texttt{thread\_block} and \texttt{thread\_unblock} is mentioned in the project guide. 
+                \texttt{thread\_foreach}, \texttt{thread\_block} and \texttt{thread\_unblock} is mentioned in the project guide, which are convenient to use to set or update the sleeping status of a thread.
+
+                We considered using a special number like \texttt{-1} for threads which are not sleeping, and in each tick we unblock the threads whose \texttt{sleeping\_ticks} is 0. But such method requires more operations, and will cause one more cycle of sleep. 
+
+                We also considered maintaining a list of sleeping threads, but as mentioned in \ref{Minimize timer interrupt handler}, it is costy to maintain an extra list when we can detect whether a thread is sleeping just by inspecting \texttt{status} and \texttt{sleeping\_ticks} of a thread. 
+    
+    \section{Priority Scheduling}
+
+        \subsection{Data Structures}
+            
+            \subsubsection{Copy here the declaration of each new or changed `\texttt{struct}' or `\texttt{struct}' member, global or static variable, `\texttt{typedef}', or enumeration. Identify the purpose of each in 25 words or less. } 
+
+            \subsubsection{Explain the data structure used to track priority donation. Use ASCII art to diagram a nested donation.  (Alternately, submit a .png file.)}
+
+        \subsection{Algorithms}
+
+            \subsubsection{How do you ensure that the highest priority thread waiting for a lock, semaphore, or condition variable wakes up first? }
+
+            \subsubsection{Describe the sequence of events when a call to \texttt{lock\_acquire()} causes a priority donation. How is nested donation handled? }
+
+            \subsubsection{Describe the sequence of events when \texttt{lock\_release()} is called on a lock that a higher-priority thread is waiting for.}
+
+        \subsection{Synchronization}
+
+            \subsubsection{Describe a potential race in \texttt{thread\_set\_priority()} and explain how your implementation avoids it.  Can you use a lock to avoid this race? }
+
+        \subsection{Rationale}
+
+            \subsubsection{Why did you choose this design? In what ways is it superior to another design you considered? }
+
+    \section{Advanced Scheduler}
+
+        \subsection{Data Structures}
+            
+            \subsubsection{Copy here the declaration of each new or changed `\texttt{struct}' or `\texttt{struct}' member, global or static variable, `\texttt{typedef}', or enumeration. Identify the purpose of each in 25 words or less. } 
+
+        \subsection{Algorithms}
+
+            \subsubsection{Suppose threads A, B, and C have nice values 0, 1, and 2. Each has a \texttt{recent\_cpu} value of 0. Fill in the table below showing the scheduling decision and the \texttt{priority} and \texttt{recent\_cpu} values for each thread after each given number of timer ticks:} 
+                \begin{center}
+                    \begin{tabular}{|c|c|c|c|c|c|c|c|}
+                        \hline
+                        \multirow{2}{*}{Timer ticks} & \multicolumn{3}{c|}{\texttt{recent\_cpu}} & \multicolumn{3}{c|}{\texttt{priority}} & \multirow{2}{*}{Thread to run} \\
+                        \cline{2-7}
+                        & A & B & C & A & B & C & \\
+                        \hline
+                        0 &  &  &  &  &  &  & \\
+                        \hline
+                        4 &  &  &  &  &  &  & \\
+                        \hline
+                        8 &  &  &  &  &  &  & \\
+                        \hline
+                        12 &  &  &  &  &  &  & \\
+                        \hline
+                        16 &  &  &  &  &  &  & \\
+                        \hline
+                        20 &  &  &  &  &  &  & \\
+                        \hline
+                        24 &  &  &  &  &  &  & \\
+                        \hline
+                        28 &  &  &  &  &  &  & \\
+                        \hline
+                        32 &  &  &  &  &  &  & \\
+                        \hline
+                        36 &  &  &  &  &  &  & \\
+                        \hline
+                    \end{tabular}
+                \end{center}
+            
+            \subsubsection{Did any ambiguities in the scheduler specification make values in the table uncertain? If so, what rule did you use to resolve them? Does this match the behavior of your scheduler? }
+
+            \subsubsection{How is the way you divided the cost of scheduling between code inside and outside interrupt context likely to affect performance? }
+
+        \subsection{Rationale}
+
+            \subsubsection{Briefly critique your design, pointing out advantages and disadvantages in your design choices. If you were to have extra time to work on this part of the project, how might you choose to refine or improve your design? }
+
+            \subsubsection{The assignment explains arithmetic for fixed-point math in detail, but it leaves it open to you to implement it. Why did you decide to implement it the way you did? If you created an abstraction layer for fixed-point math, that is, an abstract data type and/or a set of functions or macros to manipulate fixed-point numbers, why did you do so? If not, why not?}
+    
+    \section{Survey Questions}
+
+        \subsubsection*{In your opinion, was this assignment, or any one of the three problems in it, too easy or too hard? Did it take too long or too little time? }
+
+        \subsubsection*{Did you find that working on a particular part of the assignment gave you greater insight into some aspect of OS design? }
+
+        \subsubsection*{Is there some particular fact or hint we should give students in future quarters to help them solve the problems? Conversely, did you find any of our guidance to be misleading? }
+
+        \subsubsection*{Do you have any suggestions for the TAs to more effectively assist students, either for future quarters or the remaining projects? }
+
+        \subsubsection*{Any other comments? }
 
 \end{document}
 \endinput
