@@ -93,17 +93,18 @@ void
 timer_sleep (int64_t ticks) 
 {
   ASSERT (intr_get_level () == INTR_ON);
-  /* MODIFICATION
-     Note that the ticks can be 0 or negative */
+  
+  /* Note that the ticks can be 0 or negative */
   if(ticks <= 0)
     return ;
   
-  /* MODIFICATION
-     Set the counter of the sleeping thread and block it */
+  /* Ensure the atomic operation */
   enum intr_level old_level = intr_disable ();
-  struct thread *t = thread_current();
-  t->sleeping_ticks = ticks;
+
+  /* Set the counter of the current thread and block it */
+  thread_current ()->sleeping_ticks = ticks;
   thread_block ();
+  
   intr_set_level (old_level);
 }
 

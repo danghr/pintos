@@ -117,21 +117,24 @@ thread_start (void)
   sema_down (&idle_started);
 }
 
-/* MODIFIED
-   Function to monitor the function of all threads, find the 
-   ones which should finish sleeping and put them into the
-   ready list */
+/* Monitor the sleeping status of all threads. Should be 
+   invoked during the timer interrupt at each timer tick */
 void
-thread_sleep_monitor (struct thread *t)
+thread_sleep_monitor (struct thread *t, void *aux UNUSED)
 {
   /* Check it is a legal number */
   ASSERT (t->sleeping_ticks >= 0);
 
+  /* If the thread is sleeping */
   if (t->status == THREAD_BLOCKED && t->sleeping_ticks > 0)
   {
+    /* Subtract the counter by 1 */
     t->sleeping_ticks--;
+
+    /* If a thread should finish sleeping then put it into the
+       ready list */
     if (t->sleeping_ticks == 0)
-      thread_unblock(t);
+      thread_unblock (t);
   }
 }
 
@@ -140,7 +143,6 @@ thread_sleep_monitor (struct thread *t)
 void
 thread_tick (void) 
 {
-  enum intr_level old_level = intr_disable ();
   struct thread *t = thread_current ();
 
   /* Update statistics. */
@@ -157,11 +159,8 @@ thread_tick (void)
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
   
-  /* MODIFICATION
-     Add an operation of all threads to check and update the 
-     sleeping status */
-  thread_foreach(thread_sleep_monitor, t);
-  intr_set_level (old_level);
+  /* Check and update the sleeping status of all threads */
+  thread_foreach (&thread_sleep_monitor, t);
 }
 
 /* Prints thread statistics. */
@@ -489,8 +488,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
 
-  /* MODIFICATION
-     Ensure sleeping_ticks == 0 when the thread is initialized */
+  /* Ensure sleeping_ticks == 0 when the thread is initialized */
   t->sleeping_ticks = 0;
 
   old_level = intr_disable ();

@@ -114,7 +114,7 @@ extern bool thread_mlfqs;
 void thread_init (void);
 void thread_start (void);
 
-void thread_sleep_monitor (struct thread *t);
+void thread_sleep_monitor (struct thread *t, void *aux);
 void thread_tick (void);
 void thread_print_stats (void);
 
