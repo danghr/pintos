@@ -122,7 +122,7 @@ thread_start (void)
    ones which should finish sleeping and put them into the
    ready list */
 void
-thread_sleep_monitor (struct thread *t, void *aux UNUSED)
+thread_sleep_monitor (struct thread *t)
 {
   /* Check it is a legal number */
   ASSERT (t->sleeping_ticks >= 0);
@@ -140,6 +140,7 @@ thread_sleep_monitor (struct thread *t, void *aux UNUSED)
 void
 thread_tick (void) 
 {
+  enum intr_level old_level = intr_disable ();
   struct thread *t = thread_current ();
 
   /* Update statistics. */
@@ -159,8 +160,7 @@ thread_tick (void)
   /* MODIFICATION
      Add an operation of all threads to check and update the 
      sleeping status */
-  enum intr_level old_level = intr_disable ();
-  thread_foreach(thread_sleep_monitor, NULL);
+  thread_foreach(thread_sleep_monitor, t);
   intr_set_level (old_level);
 }
 

@@ -93,7 +93,6 @@ void
 timer_sleep (int64_t ticks) 
 {
   ASSERT (intr_get_level () == INTR_ON);
-
   /* MODIFICATION
      Note that the ticks can be 0 or negative */
   if(ticks <= 0)
@@ -183,11 +182,6 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
-  /* MODIFICATION
-     Add an operation of all threads to check and update the 
-     sleeping status */
-  thread_foreach(thread_sleep_monitor, NULL);
-  /* PROBLEM: What does void *aux mean? */
   thread_tick ();
 }
 
