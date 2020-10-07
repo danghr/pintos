@@ -261,9 +261,18 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
+  /* Push the thread with the priority order. */
   list_push_back (&ready_list, &t->elem);
+  list_insert_ordered(&ready_list,&t->elem,(list_less_func*)&thread_priority_compare,NULL);
   t->status = THREAD_READY;
   intr_set_level (old_level);
+}
+
+/* Priority compare function*/
+bool 
+thread_priority_compare(const struct list_elem *a,const struct list_elem *b,void *aux UNUSED)
+{
+  return list_entry(a, struct thread, elem)->priority > list_entry(b,struct thread, elem)->priority;
 }
 
 /* Returns the name of the running thread. */
