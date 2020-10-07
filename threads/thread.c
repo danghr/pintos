@@ -284,38 +284,72 @@ void
 thread_store_lock (struct lock *lock)
 {
   enum intr_level old_level = intr_disable ();
-  list_insert_ordered (&thread_current()->locks, &lock->elem,(list_less_func *) &lock_donation_compare, NULL);
+  list_insert_ordered (&thread_current()->locks,
+     &lock->elem,(list_less_func *) &lock_donation_compare, NULL);
+  
+  if (lock->donated_priority > thread_current ()->priority)
+  {
+    thread_current ()->priority = lock->donated_priority;
+    thread_yield();
+  }
   intr_set_level (old_level);
+}
+
+/* Priority donation */
+void
+thread_priority_donation (struct lock *lock)
+{
+  if (lock->holder == NULL)
+    return ;
+  
+  /* Use it to achieve lock chain */
+  struct lock *l_iterator;
+  /* Donate the priority to the lock holder */
+  l_iterator = lock;
+  /* When the chain threads' priority is lower than the donated priority */ 
+  while (l_iterator != NULL &&
+     l_iterator->donated_priority < thread_current ()->priority)
+  {
+    l_iterator->donated_priority = thread_current ()->priority;
+    thread_update_priority (l_iterator->holder);
+    /* Go along the chain. */
+    l_iterator = l_iterator->holder->lock_wait;
+  }
 }
 
 /* Update the priority of the thread */
 void
 thread_update_priority (struct thread* a)
 {
-  enum intr_level old_level = intr_disable();
+ 
   int priority_wo_donation = a->priority_wo_donation;
   int lock_max_priority;
+  enum intr_level old_level = intr_disable();
+
   /* Check the max priority of the lock. */
   if (!list_empty (&a->locks))
   {
     /* We have insert the priority of the lock
        with the decreasing order, so just pick up the front lock.*/
-    lock_max_priority = list_entry (list_front (&a->locks),
-       struct lock, elem)->donated_priority;
+    lock_max_priority = list_entry (list_front (&a->locks),struct lock, elem)
+      ->donated_priority;
     if (lock_max_priority > priority_wo_donation)
       a->priority = lock_max_priority;
+    else
+      a->priority = priority_wo_donation;
   }
-
-  a->priority = priority_wo_donation;
-
+  else
+    a->priority = priority_wo_donation;
   /*After change the priority, we need to reinsert the thread into ready queue. */
   if (a->status == THREAD_READY)
   {
     list_remove (&a->elem);
+    //list_sort (&ready_list, (list_less_func *)thread_priority_compare, NULL);
     list_insert_ordered (&ready_list, &a->elem, (list_less_func *)thread_priority_compare, NULL);
   }
   intr_set_level(old_level);
 }
+
 /* Priority compare function*/
 bool 
 thread_priority_compare (const struct list_elem *a, 
@@ -427,10 +461,10 @@ thread_set_priority (int new_priority)
   {
     thread_current ()->priority = new_priority;
     thread_current ()->priority_wo_donation = new_priority;
+    thread_yield ();
   }
-  
   /* Yield to switch to the thread with highest priorty */
-  thread_yield ();
+  
 }
 
 /* Returns the current thread's priority. */
@@ -557,6 +591,7 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+  t->lock_wait = NULL;
   t->priority_wo_donation = priority;
   t->magic = THREAD_MAGIC;
 
@@ -570,6 +605,7 @@ init_thread (struct thread *t, const char *name, int priority)
   /* Push the initiated thread into all_list in priority order */
   list_insert_ordered (&all_list, &t->allelem, (list_less_func*) &thread_priority_compare,NULL);
   intr_set_level (old_level);
+
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
