@@ -90,7 +90,7 @@ struct thread
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
     int64_t sleeping_ticks;             /* A counter of remaining sleeping ticks */
-
+   
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
@@ -104,6 +104,7 @@ struct thread
 
     struct list locks;                  /* List of holding locks */
     int priority_wo_donation;           /* Priority without donation */
+    struct lock *lock_self;              /* Thread waiting for this lock*/
   };
 
 /* If false (default), use round-robin scheduler.
