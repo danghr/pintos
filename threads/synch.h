@@ -35,8 +35,7 @@ bool lock_held_by_current_thread (const struct lock *);
 void priority_donation (struct lock *);
 bool lock_donation_compare (const struct list_elem *, 
   const struct list_elem *, void * UNUSED);
-void thread_update_priority (struct thread* a);
-void thread_store_lock (struct lock *lock);
+
 
 /* Condition variable. */
 struct condition 
