@@ -31,6 +31,7 @@
 #include <string.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include <list.h>
 
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
@@ -167,9 +168,25 @@ priority_donation (struct lock *lock)
   
   enum intr_level old_level = intr_disable ();
   /* Donate the priority to the lock holder */
-  if (thread_current ()->priority > lock->holder->priority)
+  if (thread_current ()->priority > lock->holder->priority) {
+    /* Update priority donation */
     lock->holder->priority = thread_current ()->priority;
+    lock->donated_priority = thread_current ()->priority;
+    /* Sort the lock list of the thread */
+    // list_sort (&(thread_current ()->locks), 
+    //     (list_less_func *) &lock_donation_compare, NULL); 
+  }
   intr_set_level (old_level);
+}
+
+/* Lock priority compare function*/
+bool 
+lock_donation_compare (const struct list_elem *a, 
+  const struct list_elem *b, void *aux UNUSED)
+{
+  /* Use the list_entry to transform the elem to struct thread */
+  return list_entry (a, struct lock, elem)->donated_priority > 
+    list_entry(b,struct lock, elem)->donated_priority;
 }
 
 /* Initializes LOCK.  A lock can be held by at most a single
@@ -193,6 +210,7 @@ lock_init (struct lock *lock)
   ASSERT (lock != NULL);
 
   lock->holder = NULL;
+  lock->donated_priority = -1;
   sema_init (&lock->semaphore, 1);
 }
 
@@ -215,6 +233,10 @@ lock_acquire (struct lock *lock)
 
   sema_down (&lock->semaphore);
   lock->holder = thread_current ();
+
+  /* Insert the lock into the list of locks in the thread */
+  // list_insert_ordered (&(lock->holder->locks), &(lock->elem), 
+  //   (list_less_func *) &lock_donation_compare, NULL);
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -227,15 +249,19 @@ bool
 lock_try_acquire (struct lock *lock)
 {
   bool success;
-  enum intr_level old_level;
 
   ASSERT (lock != NULL);
   ASSERT (!lock_held_by_current_thread (lock));
 
   success = sema_try_down (&lock->semaphore);
 
-  if (success) /* Get lock, no need to donate priority */
+  if (success) { /* Get lock, no need to donate priority */
     lock->holder = thread_current ();
+    /* Insert the lock into the list of locks in the thread */
+    /* HERE IS THE PROBLEM: It can cause stuck */
+    // list_insert_ordered (&(lock->holder->locks), &(lock->elem), 
+    //   (list_less_func *) &lock_donation_compare, NULL);
+  }
   
   return success;
 }
@@ -253,6 +279,10 @@ lock_release (struct lock *lock)
 
   lock->holder = NULL;
   sema_up (&lock->semaphore);
+
+  /* NEED MODIFICATION: Add removal here */
+  /* Remove and restore the value of the lock */
+  lock->donated_priority = -1;
 }
 
 /* Returns true if the current thread holds LOCK, false

@@ -267,17 +267,20 @@ thread_unblock (struct thread *t)
   ASSERT (t->status == THREAD_BLOCKED);
 
   /* Push the thread with the priority order. */
-  list_insert_ordered (&ready_list, &t->elem, (list_less_func*) &thread_priority_compare, NULL);
+  list_insert_ordered (&ready_list, &t->elem, 
+    (list_less_func*) &thread_priority_compare, NULL);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
 
 /* Priority compare function*/
 bool 
-thread_priority_compare (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+thread_priority_compare (const struct list_elem *a, 
+  const struct list_elem *b, void *aux UNUSED)
 {
   /* Use the list_entry to transform the elem to struct thread */
-  return list_entry (a, struct thread, elem)->priority > list_entry(b,struct thread, elem)->priority;
+  return list_entry (a, struct thread, elem)->priority > 
+    list_entry(b,struct thread, elem)->priority;
 }
 
 /* Returns the name of the running thread. */
@@ -346,7 +349,8 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_insert_ordered (&ready_list, &cur->elem, (list_less_func *) &thread_priority_compare, NULL);
+    list_insert_ordered (&ready_list, &cur->elem, 
+      (list_less_func *) &thread_priority_compare, NULL);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -374,6 +378,7 @@ void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
+  thread_current ()->priority_wo_donation = new_priority;
   
   /* Yield to switch to the thread with highest priorty */
   thread_yield ();
@@ -503,10 +508,14 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+  t->priority_wo_donation = priority;
   t->magic = THREAD_MAGIC;
 
   /* Ensure sleeping_ticks == 0 when the thread is initialized */
   t->sleeping_ticks = 0;
+
+  /* Initialize the thread of holding locks */
+  list_init (&(t->locks));
 
   old_level = intr_disable ();
   /* Push the initiated thread into all_list in priority order */

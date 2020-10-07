@@ -129,6 +129,20 @@ struct list_elem *list_begin (struct list *);
 struct list_elem *list_next (struct list_elem *);
 struct list_elem *list_end (struct list *);
 
+/* Returns true if ELEM is in LIST,
+   false otherwise. */
+static inline bool
+in_list (struct list_elem *elem, struct list *list)
+{
+  struct list_elem *e;
+  for (e = list_begin (list); e != list_end (list); 
+    e = list_next(e)) {
+    if (e == elem)
+      return true;
+  }
+  return false;
+}
+
 struct list_elem *list_rbegin (struct list *);
 struct list_elem *list_prev (struct list_elem *);
 struct list_elem *list_rend (struct list *);
