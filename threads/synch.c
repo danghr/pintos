@@ -156,6 +156,20 @@ sema_test_helper (void *sema_)
       sema_up (&sema[1]);
     }
 }
+
+/* Priority donation */
+void
+priority_donation (struct lock *lock)
+{
+  if (lock->holder == NULL)
+    return ;
+  
+  enum intr_level old_level = intr_disable ();
+  /* Donate the priority to the lock holder */
+  if (thread_current ()->priority > lock->holder->priority)
+    lock->holder->priority = thread_current ()->priority;
+  intr_set_level (old_level);
+}
 
 /* Initializes LOCK.  A lock can be held by at most a single
    thread at any given time.  Our locks are not "recursive", that
@@ -196,6 +210,8 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
+  priority_donation (lock);
+
   sema_down (&lock->semaphore);
   lock->holder = thread_current ();
 }
@@ -216,15 +232,10 @@ lock_try_acquire (struct lock *lock)
   ASSERT (!lock_held_by_current_thread (lock));
 
   success = sema_try_down (&lock->semaphore);
-  old_level = intr_disable ();
-  if (success)
+
+  if (success) /* Get lock, no need to donate priority */
     lock->holder = thread_current ();
-  else
-  {
-    if (thread_current ()->priority > lock->holder->priority)
-      lock->holder->priority = thread_current ()->priority;
-  }
-  intr_set_level (old_level);
+  
   return success;
 }
 
