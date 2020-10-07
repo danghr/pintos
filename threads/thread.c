@@ -260,8 +260,6 @@ void
 thread_unblock (struct thread *t) 
 {
   enum intr_level old_level;
-  struct thread *cur = running_thread ();
-  struct thread *prev = NULL;
 
   ASSERT (is_thread (t));
 
