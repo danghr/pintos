@@ -169,7 +169,7 @@ priority_donation (struct lock *lock)
   /* Use it to achieve lock chain */
   struct lock *l_iterator;
   /* Donate the priority to the lock holder */
-  thread_current ()->lock_self = lock;
+  thread_current ()->lock_wait = lock;
   l_iterator = lock;
   /* When the chain threads' priority is lower than the donated priority */ 
   while (l_iterator != NULL &&
@@ -178,11 +178,13 @@ priority_donation (struct lock *lock)
     l_iterator->donated_priority = thread_current ()->priority;
     thread_update_priority (&l_iterator);
     /* Go along the chain. */
-    l_iterator = l_iterator->holder->lock_self;
+    l_iterator = l_iterator->holder->lock_wait;
   }
 }
+
 /* Update the priority of the thread */
-void thread_update_priority (struct thread* a)
+void
+thread_update_priority (struct thread* a)
 {
   enum intr_level old_level = intr_disable();
   int priority_wo_donation = a->priority_wo_donation;
@@ -254,11 +256,24 @@ lock_acquire (struct lock *lock)
   priority_donation (lock);
 
   sema_down (&lock->semaphore);
+
+  /* After acquire the lock, you need to store the lock. */
+  thread_current ()->lock_wait = NULL;
+  thread_store_lock (&lock);
   lock->holder = thread_current ();
 
   /* Insert the lock into the list of locks in the thread */
   // list_insert_ordered (&(lock->holder->locks), &(lock->elem), 
   //   (list_less_func *) &lock_donation_compare, NULL);
+}
+
+/* Store the lock in the thread.locks, after the lock finish waiting.*/
+void 
+thread_store_lock (struct lock *lock)
+{
+  enum intr_level old_level = intr_disable ();
+  list_insert_ordered (&thread_current()->locks, &lock->elem,(list_less_func *) &lock_donation_compare, NULL);
+  intr_set_level (old_level);
 }
 
 /* Tries to acquires LOCK and returns true if successful or false

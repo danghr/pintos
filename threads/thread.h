@@ -104,7 +104,7 @@ struct thread
 
     struct list locks;                  /* List of holding locks */
     int priority_wo_donation;           /* Priority without donation */
-    struct lock *lock_self;              /* Thread waiting for this lock*/
+    struct lock *lock_wait;              /* Thread waiting for this lock*/
   };
 
 /* If false (default), use round-robin scheduler.
