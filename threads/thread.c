@@ -256,11 +256,20 @@ void
 thread_unblock (struct thread *t) 
 {
   enum intr_level old_level;
+  struct thread *cur = running_thread ();
+  struct thread *prev = NULL;
 
   ASSERT (is_thread (t));
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
+
+  if (t->priority > cur->priority)
+  {
+    prev = switch_threads (cur, t);
+    thread_schedule_tail (prev);
+  }
+
   /* Push the thread with the priority order. */
   list_insert_ordered (&ready_list, &t->elem, (list_less_func*) &thread_priority_compare, NULL);
   t->status = THREAD_READY;
@@ -368,10 +377,17 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  bool yield_flag = new_priority < thread_current ()->priority;
+  enum intr_level old_level;
+  
+  old_level = intr_disable ();
+
   thread_current ()->priority = new_priority;
-  if(yield_flag)
-    thread_yield ();
+  
+  /* Yield the thread if the priority is changed
+     so that the threads remain correct order */
+  thread_yield ();
+  
+  intr_set_level (old_level);
 }
 
 /* Returns the current thread's priority. */
