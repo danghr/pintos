@@ -166,19 +166,41 @@ priority_donation (struct lock *lock)
   if (lock->holder == NULL)
     return ;
   
-  enum intr_level old_level = intr_disable ();
+  /* Use it to achieve lock chain */
+  struct lock *l_iterator;
   /* Donate the priority to the lock holder */
-  if (thread_current ()->priority > lock->holder->priority) {
-    /* Update priority donation */
-    lock->holder->priority = thread_current ()->priority;
-    lock->donated_priority = thread_current ()->priority;
-    /* Sort the lock list of the thread */
-    // list_sort (&(thread_current ()->locks), 
-    //     (list_less_func *) &lock_donation_compare, NULL); 
+  thread_current ()->lock_self = lock;
+  l_iterator = lock;
+  /* When the chain threads' priority is lower than the donated priority */ 
+  while (l_iterator != NULL &&
+     l_iterator->donated_priority < thread_current ()->priority)
+  {
+    l_iterator->donated_priority = thread_current ()->priority;
+    thread_update_priority (&l_iterator);
+    /* Go along the chain. */
+    l_iterator = l_iterator->holder->lock_self;
   }
-  intr_set_level (old_level);
 }
+/* Update the priority of the thread */
+void thread_update_priority (struct thread* a)
+{
+  enum intr_level old_level = intr_disable();
+  int priority_wo_donation = a->priority_wo_donation;
+  int lock_max_priority;
+  /* Check the max priority of the lock. */
+  if (!list_empty (&a->locks))
+  {
+    /* We have insert the priority of the lock
+       with the decreasing order, so just pick up the front lock.*/
+    lock_max_priority = list_entry (list_front (&a->locks),
+       struct lock, elem)->donated_priority;
+    if (lock_max_priority > priority_wo_donation)
+      a->priority = lock_max_priority;
+  }
 
+  a->priority = priority_wo_donation;
+  intr_set_level(old_level);
+}
 /* Lock priority compare function*/
 bool 
 lock_donation_compare (const struct list_elem *a, 
@@ -278,8 +300,10 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
 
   lock->holder = NULL;
+  
   sema_up (&lock->semaphore);
 
+  
   /* NEED MODIFICATION: Add removal here */
   /* Remove and restore the value of the lock */
   lock->donated_priority = -1;
