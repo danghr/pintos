@@ -382,8 +382,14 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
-  thread_current ()->priority_wo_donation = new_priority;
+  /* If the thread is donated the priority, then you connot change the priority */
+  if ( !list_empty ( &thread_current ()->locks))        
+    thread_current ()->priority_wo_donation = new_priority;
+  else
+  {
+    thread_current ()->priority = new_priority;
+    thread_current ()->priority_wo_donation = new_priority;
+  }
   
   /* Yield to switch to the thread with highest priorty */
   thread_yield ();
