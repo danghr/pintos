@@ -284,8 +284,7 @@ void
 thread_store_lock (struct lock *lock)
 {
   enum intr_level old_level = intr_disable ();
-  list_insert_ordered (&thread_current()->locks,
-    &lock->elem,(list_less_func *) &lock_donation_compare, NULL);
+  list_push_back (&thread_current()->locks, &lock->elem);
   
   /*if (lock->donated_priority > thread_current ()->priority)
   {
@@ -298,7 +297,8 @@ thread_store_lock (struct lock *lock)
 /* Priority donation */
 void
 thread_priority_donation (struct lock *lock)
-{  
+{
+  
   /* Use it to achieve lock chain */
   struct lock *l_iterator;
   /* Donate the priority to the lock holder */
@@ -315,8 +315,7 @@ thread_priority_donation (struct lock *lock)
   {
     list_remove (&l_iterator->holder->elem);
     //list_sort (&ready_list, (list_less_func *)thread_priority_compare, NULL);
-    list_insert_ordered (&ready_list, &l_iterator->holder->elem, (list_less_func *) &thread_priority_compare, NULL);
-    list_sort(&ready_list,(list_less_func*) &thread_priority_compare, NULL);
+    list_insert_ordered (&ready_list, &l_iterator->holder->elem, (list_less_func *)thread_priority_compare, NULL);
   }
     l_iterator = l_iterator->holder->lock_wait;
   }
