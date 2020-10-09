@@ -183,6 +183,20 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
+
+  /* Advanced schedular */
+  if (thread_mlfqs)
+  {
+    if (ticks % TIMER_FREQ == 0)
+    {
+      /* Not yet implemented */
+    }
+    else if (ticks % 4 == 0)
+    {
+      /* Not yet implemented */
+    }
+  }
+
   thread_tick ();
 }
 

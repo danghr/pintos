@@ -302,6 +302,10 @@ thread_priority_donation (struct lock *lock)
   if (lock->holder == NULL)
     return ;
   
+  /* Advanced schedular */
+  if (thread_mlfqs)
+    return ;
+  
   /* Use it to achieve lock chain */
   struct lock *l_iterator;
   /* Donate the priority to the lock holder */
@@ -478,15 +482,31 @@ thread_get_priority (void)
 void
 thread_set_nice (int nice UNUSED) 
 {
-  /* Not yet implemented. */
+  struct thread *cur = thread_current ();
+  int old_priority, new_priority;
+  
+  cur->nice = nice;
+  old_priority = cur->priority;
+  new_priority = thread_calc_priority_by_nice (cur);
+  cur->priority = new_priority;
+  if (new_priority < old_priority)
+    thread_yield ();
+}
+
+/* Calculate the priority of a thread according to 
+   nice values */
+int
+thread_calc_priority_by_nice (struct thread *t)
+{
+  return PRI_MAX - (thread_get_recent_cpu () / 4) 
+    - (thread_get_nice () * 2);
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return thread_current ()->nice;
 }
 
 /* Returns 100 times the system load average. */
@@ -600,6 +620,9 @@ init_thread (struct thread *t, const char *name, int priority)
 
   /* Initialize the thread of holding locks */
   list_init (&(t->locks));
+
+  /* Initialize "nice" value */
+  t->nice = 0;
 
   old_level = intr_disable ();
   /* Push the initiated thread into all_list in priority order */
