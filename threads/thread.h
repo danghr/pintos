@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "fixed-point.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -23,6 +24,11 @@ typedef int tid_t;
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
+
+/* Nice priorities. */
+#define NICE_MIN -20                    /* Lowest priority. */
+#define NICE_DEFAULT 0                  /* Default priority. */
+#define NICE_MAX 20                     /* Highest priority. */
 
 /* A kernel thread or user process.
 
@@ -109,7 +115,7 @@ struct thread
 
    /* Variables used in advanced schedular */
     int nice;                           /* "nice" value of a thread */
-    int recent_cpu;                     /* "recent_cpu" value of a thread */
+    fixed_point recent_cpu;             /* "recent_cpu" value of a thread */
   };
 
 /* If false (default), use round-robin scheduler.
@@ -146,10 +152,15 @@ void thread_foreach (thread_action_func *, void *);
 int thread_get_priority (void);
 void thread_set_priority (int);
 
+bool thread_priority_compare (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+
 int thread_get_nice (void);
 void thread_set_nice (int);
-int thread_calc_priority_by_nice (struct thread *);
-int thread_get_recent_cpu (void);
+void thread_update_priority_by_nice (void);
 int thread_get_load_avg (void);
-bool thread_priority_compare (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+int thread_get_recent_cpu (void);
+void update_load_avg (void);
+void thread_update_recent_cpu (void);
+int count_ready_threads (void);
+
 #endif /* threads/thread.h */

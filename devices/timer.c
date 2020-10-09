@@ -7,6 +7,7 @@
 #include "threads/interrupt.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
+#include "threads/fixed-point.h"
   
 /* See [8254] for hardware details of the 8254 timer chip. */
 
@@ -184,20 +185,32 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
 
-  /* Advanced schedular */
+  thread_tick ();
+
+  /* Advanced scheduler */
   if (thread_mlfqs)
     {
+      /* Executed every tick */
+      /* Increase recent_cpu of running thread by 1 */
+      /* Not yet implemented */
       if (ticks % TIMER_FREQ == 0)
         {
-          /* Not yet implemented */
+          /* Executed every second */
+          /* Update every thread's recent_cpu */
+          thread_update_recent_cpu ();
+          /* Update every thread's load_avg */
+          update_load_avg ();
         }
-      else if (ticks % 4 == 0)
+      if (ticks % 4 == 0)
         {
-          /* Not yet implemented */
+          /* Executed every four ticks */
+          /* Update priority for all threads */
+          thread_foreach (
+            (thread_action_func *) &thread_update_priority_by_nice, 
+            NULL);
+          /* Not fully implemented */
         }
     }
-
-  thread_tick ();
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

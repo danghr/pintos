@@ -11,6 +11,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/fixed-point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -59,6 +60,9 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
    Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
 
+/* System load average */
+fixed_point load_avg;
+
 static void kernel_thread (thread_func *, void *aux);
 
 static void idle (void *aux UNUSED);
@@ -103,6 +107,9 @@ thread_init (void)
   initial_thread->lock_wait = NULL;
   initial_thread->priority_wo_donation = PRI_DEFAULT;
   list_init(&initial_thread->locks);
+
+  /* Initialize load_avg */
+  load_avg = convert_int_to_fp (0);
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -165,7 +172,7 @@ thread_tick (void)
     intr_yield_on_return ();
   
   /* Check and update the sleeping status of all threads */
-  thread_foreach (&thread_sleep_monitor, t);
+  thread_foreach ((thread_action_func *) &thread_sleep_monitor, NULL);
 }
 
 /* Prints thread statistics. */
@@ -491,35 +498,103 @@ thread_get_priority (void)
   return thread_current ()->priority;
 }
 
-/* Sets the current thread's nice value to NICE. */
+/* Sets the current thread's "nice" value to NICE. */
 void
-thread_set_nice (int nice UNUSED) 
+thread_set_nice (int nice) 
 {
-  /* Not yet implemented. */
+  thread_current ()->nice = nice;
+
+  /* Calculate the new priority */
+  thread_update_priority_by_nice ();
+}
+
+/* Update the priority according to "nice" value */
+void 
+thread_update_priority_by_nice (void)
+{
+  thread_current ()->priority = PRI_MAX - 
+    convert_fp_to_int_zero(
+      fp_div_int (thread_current ()->recent_cpu, 4)
+    ) - 
+    convert_fp_to_int_zero(
+      fp_div_int (thread_current ()->nice, 2)
+    );
+}
+
+/* Update the recent_cpu for recent thread */
+void
+thread_update_recent_cpu (void)
+{
+  thread_current ()->recent_cpu = 
+    fp_add_int (
+      fp_mul (
+        fp_div (
+          fp_mul_int (load_avg, 2), 
+          fp_add_int (fp_mul_int (load_avg, 2), 1)), 
+        thread_current ()->recent_cpu), 
+      thread_current ()->nice);
+}
+
+/* Update the load_avg */
+void 
+update_load_avg (void)
+{
+  fixed_point add_1, add_2;
+  add_1 = fp_mul (fp_div_int (convert_int_to_fp (59), 60), 
+    load_avg);
+  add_2 = fp_mul (fp_div_int (convert_int_to_fp (1), 60), 
+    count_ready_threads ());
+  load_avg = fp_add (add_1, add_2);
+  printf("%d\n", load_avg);
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return thread_current ()->nice;
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return convert_fp_to_int_nearest (fp_mul_int (load_avg, 100));
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return convert_fp_to_int_nearest 
+    (fp_mul_int(thread_current ()->recent_cpu, 100));
+}
+
+/* Count the ready threads */
+int
+count_ready_threads (void)
+{
+  enum intr_level old_level;
+  int cnt = 0;
+
+  old_level = intr_disable ();
+  struct list_elem *l_iterator;
+  for (l_iterator = list_front (&all_list); 
+    l_iterator != list_end (&all_list); l_iterator = l_iterator->next)
+    {
+      enum thread_status t_status = 
+        list_entry (l_iterator, struct thread, allelem)->status;
+      if (t_status == THREAD_RUNNING || t_status == THREAD_READY)
+        cnt++;
+    }
+  
+  intr_set_level (old_level);
+  
+  return cnt;
+
+  /* Note that idle thread never appears in the ready list after
+     the first kernel thread is running */
+  // return (int)(list_size (&ready_list)) + 1;
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -618,8 +693,19 @@ init_thread (struct thread *t, const char *name, int priority)
   /* Initialize the thread of holding locks */
   list_init (&(t->locks));
 
-  /* Initialize "nice" value */
-  t->nice = 0;
+  /* Initialize values for advanced scheduler
+     Set as NICE_DEFAULT if the thread is main thread
+     Otherwise inherit from parent 
+     Should not be affected if not in thread_mlfqs as all thread
+     can inherit from main which is NICE_DEFAULT */
+  /* Note that tid = 1 specifically means the initial thread
+     but tid is allocated after the thread is initialized
+     so use the name of thread to replace it */
+  if (name == "main")
+    t->nice = NICE_DEFAULT;
+  else
+    t->nice = thread_get_nice ();
+  t->recent_cpu = convert_int_to_fp (0);
 
   old_level = intr_disable ();
   /* Push the initiated thread into all_list in priority order */
