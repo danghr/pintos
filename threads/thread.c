@@ -275,22 +275,16 @@ thread_unblock (struct thread *t)
   list_insert_ordered (&ready_list, &t->elem, 
     (list_less_func*) &thread_priority_compare, NULL);
   t->status = THREAD_READY;
+  
   intr_set_level (old_level);
 }
 
-
-/* Store the lock in the thread.locks, after the lock finish waiting.*/
+/* Store the lock in thread->locks, after the lock finishes waiting */
 void 
 thread_store_lock (struct lock *lock)
 {
   enum intr_level old_level = intr_disable ();
   list_push_back (&thread_current()->locks, &lock->elem);
-  
-  /*if (lock->donated_priority > thread_current ()->priority)
-  {
-    thread_current ()->priority = lock->donated_priority;
-    thread_yield();
-  }*/
   intr_set_level (old_level);
 }
 
@@ -298,34 +292,37 @@ thread_store_lock (struct lock *lock)
 void
 thread_priority_donation (struct lock *lock)
 {
-  
   /* Advanced schedular */
   if (thread_mlfqs)
     return ;
   
-  /* Use it to achieve lock chain */
+  /* Iterator in the lock chain */
   struct lock *l_iterator;
+
   /* Donate the priority to the lock holder */
   l_iterator = lock;
-  /* When the chain threads' priority is lower than the donated priority */ 
+
+  /* When the chain threads' priority is lower than the donated 
+     priority */
   struct thread *current_thread = thread_current();
   while (l_iterator != NULL &&
-     l_iterator->donated_priority < current_thread->priority)
-  {
-    l_iterator->donated_priority = current_thread->priority;
-    thread_update_priority (l_iterator->holder);
-    /* Go along the chain. */
-  if (l_iterator->holder->status == THREAD_READY)
-  {
-    list_remove (&l_iterator->holder->elem);
-    //list_sort (&ready_list, (list_less_func *)thread_priority_compare, NULL);
-    list_insert_ordered (&ready_list, &l_iterator->holder->elem, (list_less_func *)thread_priority_compare, NULL);
-  }
-    l_iterator = l_iterator->holder->lock_wait;
-  }
+    l_iterator->donated_priority < current_thread->priority)
+    {
+      l_iterator->donated_priority = current_thread->priority;
+      thread_update_priority (l_iterator->holder);
+    
+      /* Go along the chain. */
+      if (l_iterator->holder->status == THREAD_READY)
+        {
+          list_remove (&l_iterator->holder->elem);
+          list_insert_ordered (&ready_list, &l_iterator->holder->elem, 
+            (list_less_func *)thread_priority_compare, NULL);
+        }
+      l_iterator = l_iterator->holder->lock_wait;
+    }
 }
 
-/* Update the priority of the thread */
+/* Update the priority of the thread according to its locks */
 void
 thread_update_priority (struct thread* a)
 {
@@ -334,24 +331,32 @@ thread_update_priority (struct thread* a)
   int lock_max_priority;
   enum intr_level old_level = intr_disable();
 
-  /* Check the max priority of the lock. */
+  /* Check the max priority of the lock */
+  /* If the thread is holding some locks */
   if (!list_empty (&a->locks))
   {
-    list_sort (&a->locks,(list_less_func*) &lock_donation_compare, NULL);
-    lock_max_priority = list_entry (list_front (&a->locks),struct lock, elem)
+    /* Sort the list and get the first item */
+    list_sort (&a->locks, (list_less_func*) &lock_donation_compare,
+      NULL);
+    lock_max_priority = 
+      list_entry (list_front (&a->locks), struct lock, elem)
       ->donated_priority;
+    
     if (lock_max_priority > priority_wo_donation)
       a->priority = lock_max_priority;
     else
       a->priority = priority_wo_donation;
   }
+  /* Else if the thread is not holding any lock */
   else
     a->priority = priority_wo_donation;
-  /*After change the priority, we need to reinsert the thread into ready queue. */
+  
+  /* After changing the priority, we need to reinsert the thread 
+     into ready queue */
   intr_set_level(old_level);
 }
 
-/* Priority compare function*/
+/* Priority compare function */
 bool 
 thread_priority_compare (const struct list_elem *a, 
   const struct list_elem *b, void *aux UNUSED)
@@ -455,17 +460,22 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  /* If the thread is donated the priority, then you connot change the priority */
-  if ( !list_empty ( &thread_current ()->locks))        
+  /* If the thread's priority is being donated, then it connot 
+     be changed */
+  if (!list_empty (&thread_current ()->locks)) {
+    /* Record the new priority so that once the lock is released, 
+       it can switch back to its original priority */
     thread_current ()->priority_wo_donation = new_priority;
+  }
   else
   {
+    /* Set the new priority and record it to get prepared for
+       other lock operations */
     thread_current ()->priority = new_priority;
     thread_current ()->priority_wo_donation = new_priority;
+    /* Yield to switch to the thread with highest priorty */
     thread_yield ();
   }
-  /* Yield to switch to the thread with highest priorty */
-  
 }
 
 /* Returns the current thread's priority. */
@@ -607,7 +617,8 @@ init_thread (struct thread *t, const char *name, int priority)
 
   old_level = intr_disable ();
   /* Push the initiated thread into all_list in priority order */
-  list_insert_ordered (&all_list, &t->allelem, (list_less_func*) &thread_priority_compare,NULL);
+  list_insert_ordered (&all_list, &t->allelem, 
+    (list_less_func*) &thread_priority_compare,NULL);
   intr_set_level (old_level);
 
 }
@@ -678,7 +689,8 @@ thread_schedule_tail (struct thread *prev)
      pull out the rug under itself.  (We don't free
      initial_thread because its memory was not obtained via
      palloc().) */
-  if (prev != NULL && prev->status == THREAD_DYING && prev != initial_thread) 
+  if (prev != NULL && prev->status == THREAD_DYING 
+    && prev != initial_thread) 
     {
       ASSERT (prev != cur);
       palloc_free_page (prev);

@@ -102,10 +102,12 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
 
+   /* Variables used in priority donation */
     struct list locks;                  /* List of holding locks */
     int priority_wo_donation;           /* Priority without donation */
-    struct lock *lock_wait;             /* Thread waiting for this lock*/
+    struct lock *lock_wait;             /* The lock a thread is waiting for */
 
+   /* Variables used in advanced schedular */
     int nice;                           /* "nice" value of a thread */
     int recent_cpu;                     /* "recent_cpu" value of a thread */
   };

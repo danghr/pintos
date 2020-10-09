@@ -20,4 +20,4 @@ fixed_point fp_mul_int (fixed_point a, int b);
 fixed_point fp_div (fixed_point a, fixed_point b);
 fixed_point fp_div_int (fixed_point a, int b);
 
-#endif
+#endif /* threads/fixed-point-h */

@@ -95,7 +95,7 @@ timer_sleep (int64_t ticks)
   ASSERT (intr_get_level () == INTR_ON);
   
   /* Note that the ticks can be 0 or negative */
-  if(ticks <= 0)
+  if (ticks <= 0)
     return ;
   
   /* Ensure the atomic operation */
@@ -186,16 +186,16 @@ timer_interrupt (struct intr_frame *args UNUSED)
 
   /* Advanced schedular */
   if (thread_mlfqs)
-  {
-    if (ticks % TIMER_FREQ == 0)
     {
-      /* Not yet implemented */
+      if (ticks % TIMER_FREQ == 0)
+        {
+          /* Not yet implemented */
+        }
+      else if (ticks % 4 == 0)
+        {
+          /* Not yet implemented */
+        }
     }
-    else if (ticks % 4 == 0)
-    {
-      /* Not yet implemented */
-    }
-  }
 
   thread_tick ();
 }
