@@ -539,16 +539,12 @@ thread_update_recent_cpu (void)
 void 
 update_load_avg (void)
 {
-  // msg ("Load average was %d", thread_get_load_avg ());
-  // msg ("\tOriginal value: %d", load_avg);
   fixed_point add_1, add_2;
   add_1 = fp_mul (fp_div_int (convert_int_to_fp (59), 60), 
     load_avg);
   add_2 = fp_mul_int (fp_div_int (convert_int_to_fp (1), 60), 
     count_ready_threads ());
   load_avg = fp_add (add_1, add_2);
-  // msg ("Load average updated to %d", thread_get_load_avg ());
-  // msg ("\tOriginal value: %d\n", load_avg);
 }
 
 /* Returns the current thread's nice value. */
