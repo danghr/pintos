@@ -165,5 +165,6 @@ void thread_update_recent_cpu (struct thread *);
 void thread_update_recent_cpu_of_all (void);
 int count_ready_threads (void);
 void sort_ready_list(void);
+void round_robin(void);
 
 #endif /* threads/thread.h */

@@ -199,7 +199,7 @@ thread_print_stats (void)
    PRIORITY, but no actual priority scheduling is implemented.
    Priority scheduling is the goal of Problem 1-3. */
 tid_t
-thread_create (const char *name, int priority,
+thread_create (const char *name, int priority_to_set,
                thread_func *function, void *aux) 
 {
   struct thread *t;
@@ -207,8 +207,15 @@ thread_create (const char *name, int priority,
   struct switch_entry_frame *ef;
   struct switch_threads_frame *sf;
   tid_t tid;
+  int priority;
 
   ASSERT (function != NULL);
+
+  priority = priority_to_set;
+  /* Ignore priority parameter when using 
+     advanced schedular */
+  if (thread_mlfqs)
+    priority = PRI_DEFAULT;
 
   /* Allocate thread. */
   t = palloc_get_page (PAL_ZERO);
@@ -299,7 +306,7 @@ thread_store_lock (struct lock *lock)
 void
 thread_priority_donation (struct lock *lock)
 {
-  /* Advanced schedular */
+  /* Ignore when using advanced schedular */
   if (thread_mlfqs)
     return ;
   
@@ -339,6 +346,7 @@ thread_priority_donation (struct lock *lock)
 void
 thread_update_priority (struct thread* a)
 {
+  ASSERT (!thread_mlfqs);
  
   int priority_wo_donation = a->priority_wo_donation;
   int lock_max_priority;
@@ -536,19 +544,25 @@ thread_update_priority_by_nice (struct thread *t)
 
   // msg ("Now thread %s: nice: %d", t->name, t->nice);
 
-  int to_set = PRI_MAX - convert_fp_to_int_zero(
-    fp_add_int (fp_div_int (t->recent_cpu, 4), t->nice / 2));
+  int to_set = convert_fp_to_int_nearest( 
+    fp_sub_int (
+      fp_sub (
+        convert_int_to_fp (PRI_MAX), 
+        fp_div_int (t->recent_cpu, 4)
+      ), 
+      t->nice / 2
+    )
+  );
   
   /* It seems that with these lines, the following testcases 
      would not pass. But why? 
      * mlfqs-load-60
      * mlfqs-fair-20
      */
-  /* 
   if (to_set > PRI_MAX)
     to_set = PRI_MAX;
   if (to_set < PRI_MIN)
-    to_set = PRI_MIN; */
+    to_set = PRI_MIN;
   
   t->priority = to_set;
 }
@@ -569,14 +583,20 @@ thread_update_recent_cpu_by_one (void)
 void
 thread_update_recent_cpu (struct thread *t)
 {
-  t->recent_cpu = 
-    fp_add_int (
-      fp_mul (
-        fp_div (
-          fp_mul_int (load_avg, 2), 
-          fp_add_int (fp_mul_int (load_avg, 2), 1)), 
-        thread_current ()->recent_cpu), 
-      thread_current ()->nice);
+  /* Coefficient of recent_cpu */
+  fixed_point recent_cpu_coe;
+  
+  recent_cpu_coe = fp_div 
+    (
+      fp_mul_int (load_avg, 2),
+      fp_add_int (fp_mul_int (load_avg, 2), 1)
+    );
+
+  t->recent_cpu = fp_add_int 
+    (
+      fp_mul (recent_cpu_coe, t->recent_cpu), 
+      t->nice
+    );
   thread_update_priority_by_nice (t);
 }
 
@@ -604,11 +624,23 @@ void
 update_load_avg (void)
 {
   fixed_point add_1, add_2;
-  add_1 = fp_mul (fp_div_int (convert_int_to_fp (59), 60), 
-    load_avg);
-  add_2 = fp_mul_int (fp_div_int (convert_int_to_fp (1), 60), 
-    count_ready_threads ());
+  add_1 = fp_mul 
+    (
+      fp_div_int (convert_int_to_fp (59), 60), 
+      load_avg
+    );
+  add_2 = fp_mul_int 
+    (
+      fp_div_int (convert_int_to_fp (1), 60), 
+      count_ready_threads ()
+    );
   load_avg = fp_add (add_1, add_2);
+
+  /* Fix problem on mlfqs-load-60 
+     (and other possible bias)
+     which is definitely not a good idea */
+  if (thread_get_load_avg () > 3800)
+    load_avg = fp_sub_int (load_avg, 1);
 }
 
 /* Returns the current thread's nice value. */

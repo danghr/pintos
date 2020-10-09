@@ -197,7 +197,6 @@ timer_interrupt (struct intr_frame *args UNUSED)
       thread_update_recent_cpu_by_one ();
       if (ticks % TIMER_FREQ == 0)
         {
-          // msg ("A SECOND PASSED");
           /* Executed every second */
           /* Update load_avg */
           update_load_avg ();
