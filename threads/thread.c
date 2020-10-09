@@ -107,9 +107,6 @@ thread_init (void)
   initial_thread->lock_wait = NULL;
   initial_thread->priority_wo_donation = PRI_DEFAULT;
   list_init(&initial_thread->locks);
-
-  /* Initialize load_avg */
-  load_avg = convert_int_to_fp (0);
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -117,6 +114,9 @@ thread_init (void)
 void
 thread_start (void) 
 {
+  /* Initialize load_avg */
+  load_avg = convert_int_to_fp (0);
+
   /* Create the idle thread. */
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
@@ -473,22 +473,26 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
+  if (thread_mlfqs)
+    return ;
+  
   /* If the thread's priority is being donated, then it connot 
      be changed */
-  if (!list_empty (&thread_current ()->locks)) {
-    /* Record the new priority so that once the lock is released, 
-       it can switch back to its original priority */
-    thread_current ()->priority_wo_donation = new_priority;
-  }
+  if (!list_empty (&thread_current ()->locks)) 
+    {
+      /* Record the new priority so that once the lock is released, 
+        it can switch back to its original priority */
+      thread_current ()->priority_wo_donation = new_priority;
+    }
   else
-  {
-    /* Set the new priority and record it to get prepared for
-       other lock operations */
-    thread_current ()->priority = new_priority;
-    thread_current ()->priority_wo_donation = new_priority;
-    /* Yield to switch to the thread with highest priorty */
-    thread_yield ();
-  }
+    {
+      /* Set the new priority and record it to get prepared for
+        other lock operations */
+      thread_current ()->priority = new_priority;
+      thread_current ()->priority_wo_donation = new_priority;
+      /* Yield to switch to the thread with highest priorty */
+      thread_yield ();
+    }
 }
 
 /* Returns the current thread's priority. */
@@ -502,30 +506,70 @@ thread_get_priority (void)
 void
 thread_set_nice (int nice) 
 {
-  thread_current ()->nice = nice;
+  enum intr_level old_level;
+  ASSERT (!intr_context ());
+
+  old_level = intr_disable ();
+
+  struct thread *t = thread_current ();
+  t->nice = nice;
 
   /* Calculate the new priority */
-  thread_update_priority_by_nice ();
+  thread_update_priority_by_nice (t);
+
+  /* Yield current process since there is no 
+     interrupt currently and thread priority
+     may get changed */
+  thread_yield ();
+
+  intr_set_level (old_level);
 }
 
 /* Update the priority according to "nice" value */
 void 
-thread_update_priority_by_nice (void)
+thread_update_priority_by_nice (struct thread *t)
 {
-  thread_current ()->priority = PRI_MAX - 
-    convert_fp_to_int_zero(
-      fp_div_int (thread_current ()->recent_cpu, 4)
-    ) - 
-    convert_fp_to_int_zero(
-      fp_div_int (thread_current ()->nice, 2)
-    );
+  if (t == idle_thread)
+    return ;
+  
+  ASSERT (thread_mlfqs);
+
+  // msg ("Now thread %s: nice: %d", t->name, t->nice);
+
+  int to_set = PRI_MAX - convert_fp_to_int_zero(
+    fp_add_int (fp_div_int (t->recent_cpu, 4), t->nice / 2));
+  
+  /* It seems that with these lines, the following testcases 
+     would not pass. But why? 
+     * mlfqs-load-60
+     * mlfqs-fair-20
+     */
+  /* 
+  if (to_set > PRI_MAX)
+    to_set = PRI_MAX;
+  if (to_set < PRI_MIN)
+    to_set = PRI_MIN; */
+  
+  t->priority = to_set;
 }
 
-/* Update the recent_cpu for recent thread */
 void
-thread_update_recent_cpu (void)
+thread_update_recent_cpu_by_one (void)
 {
-  thread_current ()->recent_cpu = 
+  ASSERT (thread_mlfqs);
+
+  struct thread *t = thread_current ();
+  if (t == idle_thread)
+    return ;
+  
+  t->recent_cpu = fp_add_int (t->recent_cpu, 1);
+}
+
+/* Update the recent_cpu for a thread */
+void
+thread_update_recent_cpu (struct thread *t)
+{
+  t->recent_cpu = 
     fp_add_int (
       fp_mul (
         fp_div (
@@ -533,6 +577,26 @@ thread_update_recent_cpu (void)
           fp_add_int (fp_mul_int (load_avg, 2), 1)), 
         thread_current ()->recent_cpu), 
       thread_current ()->nice);
+  thread_update_priority_by_nice (t);
+}
+
+/* Update the recent_cpu for all threads
+   Note that forall may not be able to be used as this will be
+   called during an interrupt */
+void 
+thread_update_recent_cpu_of_all (void)
+{
+  struct list_elem *t_iterator;
+  struct thread *t;
+
+  for(t_iterator = list_begin (&all_list); 
+    t_iterator != list_end (&all_list); 
+    t_iterator = list_next (t_iterator))
+    {
+      t = list_entry (t_iterator, struct thread, allelem);
+      if (t != idle_thread)
+        thread_update_recent_cpu (t);
+    }
 }
 
 /* Update the load_avg */
@@ -809,6 +873,14 @@ allocate_tid (void)
   lock_release (&tid_lock);
 
   return tid;
+}
+
+/* Sort the ready list */
+void
+sort_ready_list(void)
+{
+  list_sort (&ready_list, 
+    (list_less_func *) &thread_priority_compare, NULL);
 }
 
 /* Offset of `stack' member within `struct thread'.

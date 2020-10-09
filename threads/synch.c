@@ -242,9 +242,13 @@ lock_acquire (struct lock *lock)
   old_level = intr_disable ();
 
   /* After acquiring the lock, store it in the thread */
-  thread_current ()->lock_wait = NULL;
-  lock->donated_priority = thread_current ()->priority;
-  thread_store_lock (lock);
+  if (!thread_mlfqs)
+    {
+      thread_current ()->lock_wait = NULL;
+      lock->donated_priority = thread_current ()->priority;
+      thread_store_lock (lock);
+    }
+  
   lock->holder = thread_current ();
 
   intr_set_level (old_level);
@@ -291,8 +295,12 @@ lock_release (struct lock *lock)
   /* Release the lock, remove it from the thread and restore
      its priority due to possible donation */
   lock->holder = NULL;
-  list_remove (&lock->elem);
-  thread_update_priority (thread_current ());
+  if (!thread_mlfqs)
+    {
+      list_remove (&lock->elem);
+      thread_update_priority (thread_current ());
+    }
+
 
   sema_up (&lock->semaphore);
 

@@ -183,6 +183,8 @@ timer_print_stats (void)
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
+  enum intr_level old_level = intr_disable ();
+
   ticks++;
 
   thread_tick ();
@@ -192,14 +194,15 @@ timer_interrupt (struct intr_frame *args UNUSED)
     {
       /* Executed every tick */
       /* Increase recent_cpu of running thread by 1 */
-      /* Not yet implemented */
+      thread_update_recent_cpu_by_one ();
       if (ticks % TIMER_FREQ == 0)
         {
+          // msg ("A SECOND PASSED");
           /* Executed every second */
-          /* Update every thread's recent_cpu */
-          thread_update_recent_cpu ();
-          /* Update every thread's load_avg */
+          /* Update load_avg */
           update_load_avg ();
+          /* Update every thread's recent_cpu */
+          thread_update_recent_cpu_of_all ();
         }
       if (ticks % 4 == 0)
         {
@@ -208,9 +211,10 @@ timer_interrupt (struct intr_frame *args UNUSED)
           thread_foreach (
             (thread_action_func *) &thread_update_priority_by_nice, 
             NULL);
-          /* Not fully implemented */
         }
     }
+  
+  intr_set_level (old_level);
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
