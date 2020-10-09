@@ -104,7 +104,10 @@ struct thread
 
     struct list locks;                  /* List of holding locks */
     int priority_wo_donation;           /* Priority without donation */
-    struct lock *lock_wait;              /* Thread waiting for this lock*/
+    struct lock *lock_wait;             /* Thread waiting for this lock*/
+
+    int nice;                           /* "nice" value of a thread */
+    int recent_cpu;                     /* "recent_cpu" value of a thread */
   };
 
 /* If false (default), use round-robin scheduler.
@@ -143,6 +146,7 @@ void thread_set_priority (int);
 
 int thread_get_nice (void);
 void thread_set_nice (int);
+int thread_calc_priority_by_nice (struct thread *);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 bool thread_priority_compare (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);

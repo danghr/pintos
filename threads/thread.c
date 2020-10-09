@@ -299,6 +299,10 @@ void
 thread_priority_donation (struct lock *lock)
 {
   
+  /* Advanced schedular */
+  if (thread_mlfqs)
+    return ;
+  
   /* Use it to achieve lock chain */
   struct lock *l_iterator;
   /* Donate the priority to the lock holder */
@@ -597,6 +601,9 @@ init_thread (struct thread *t, const char *name, int priority)
 
   /* Initialize the thread of holding locks */
   list_init (&(t->locks));
+
+  /* Initialize "nice" value */
+  t->nice = 0;
 
   old_level = intr_disable ();
   /* Push the initiated thread into all_list in priority order */
