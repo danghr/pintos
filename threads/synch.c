@@ -72,7 +72,8 @@ sema_down (struct semaphore *sema)
   while (sema->value == 0) 
     {
       list_push_back (&sema->waiters, &thread_current ()->elem);
-      list_sort (&sema->waiters, (list_less_func *) &thread_priority_compare, NULL);
+      list_sort (&sema->waiters, 
+        (list_less_func *) &thread_priority_compare, NULL);
       thread_block ();
     }
   sema->value--;
@@ -118,6 +119,7 @@ sema_up (struct semaphore *sema)
   ASSERT (sema != NULL);
 
   old_level = intr_disable ();
+
   if (!list_empty (&sema->waiters)) 
     {
       list_sort (&sema->waiters, 
@@ -126,6 +128,7 @@ sema_up (struct semaphore *sema)
         struct thread, elem));
     }
   sema->value++;
+  /* Then the thread waiting can get the information */
 
   /* After unblocking the thread, yield it so that it will be put
      into waiting list in correct order */

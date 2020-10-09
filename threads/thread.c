@@ -308,16 +308,22 @@ thread_priority_donation (struct lock *lock)
   while (l_iterator != NULL &&
     l_iterator->donated_priority < current_thread->priority)
     {
+      /* Store the priority to donate in the lock so that
+         the thread currently holding the lock can get 
+         updated */
       l_iterator->donated_priority = current_thread->priority;
       thread_update_priority (l_iterator->holder);
-    
-      /* Go along the chain. */
+
       if (l_iterator->holder->status == THREAD_READY)
         {
+          /* Put the holder thread of the lock in the correct place
+             of the ready list */
           list_remove (&l_iterator->holder->elem);
           list_insert_ordered (&ready_list, &l_iterator->holder->elem, 
             (list_less_func *)thread_priority_compare, NULL);
         }
+
+      /* Go along the chain (A waiting for B and B waiting for C) */
       l_iterator = l_iterator->holder->lock_wait;
     }
 }
@@ -342,6 +348,8 @@ thread_update_priority (struct thread* a)
       list_entry (list_front (&a->locks), struct lock, elem)
       ->donated_priority;
     
+    /* Set the priority as the largest one among those donated
+       by the locks and the original one of the thread */
     if (lock_max_priority > priority_wo_donation)
       a->priority = lock_max_priority;
     else
@@ -351,8 +359,6 @@ thread_update_priority (struct thread* a)
   else
     a->priority = priority_wo_donation;
   
-  /* After changing the priority, we need to reinsert the thread 
-     into ready queue */
   intr_set_level(old_level);
 }
 
