@@ -539,13 +539,16 @@ thread_update_recent_cpu (void)
 void 
 update_load_avg (void)
 {
+  // msg ("Load average was %d", thread_get_load_avg ());
+  // msg ("\tOriginal value: %d", load_avg);
   fixed_point add_1, add_2;
   add_1 = fp_mul (fp_div_int (convert_int_to_fp (59), 60), 
     load_avg);
-  add_2 = fp_mul (fp_div_int (convert_int_to_fp (1), 60), 
+  add_2 = fp_mul_int (fp_div_int (convert_int_to_fp (1), 60), 
     count_ready_threads ());
   load_avg = fp_add (add_1, add_2);
-  printf("%d\n", load_avg);
+  // msg ("Load average updated to %d", thread_get_load_avg ());
+  // msg ("\tOriginal value: %d\n", load_avg);
 }
 
 /* Returns the current thread's nice value. */
@@ -574,29 +577,15 @@ thread_get_recent_cpu (void)
 int
 count_ready_threads (void)
 {
-  enum intr_level old_level;
-  int cnt = 0;
-
-  old_level = intr_disable ();
-  struct list_elem *l_iterator;
-  for (l_iterator = list_front (&all_list); 
-    l_iterator != list_end (&all_list); l_iterator = l_iterator->next)
-    {
-      enum thread_status t_status = 
-        list_entry (l_iterator, struct thread, allelem)->status;
-      if (t_status == THREAD_RUNNING || t_status == THREAD_READY)
-        cnt++;
-    }
-  
-  intr_set_level (old_level);
-  
-  return cnt;
-
   /* Note that idle thread never appears in the ready list after
-     the first kernel thread is running */
-  // return (int)(list_size (&ready_list)) + 1;
+     the first kernel thread is running, but it may be the thread
+     when timer interrupt occurs */
+  int ret = (int)(list_size (&ready_list));
+  if (thread_current () != idle_thread)
+    ret++;
+  return ret;
 }
-
+
 /* Idle thread.  Executes when no other thread is ready to run.
 
    The idle thread is initially put on the ready list by
