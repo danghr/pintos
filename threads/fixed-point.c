@@ -22,8 +22,8 @@ fixed_point
 convert_fp_to_int_nearest (fixed_point x)
 {
   if (x >= 0)
-    return (x + (FP_FRACTION_BITS >> 2)) >> FP_FRACTION_BITS;
-  return (x - (FP_FRACTION_BITS >> 2)) >> FP_FRACTION_BITS;
+    return (x + (FP_FRACTION_BITS >> 1)) >> FP_FRACTION_BITS;
+  return (x - (FP_FRACTION_BITS >> 1)) >> FP_FRACTION_BITS;
 }
 
 /* Addition of two fixed point numbers */
@@ -35,9 +35,9 @@ fp_add (fixed_point a, fixed_point b)
 
 /* Addition of a fixed point number and an integer */
 fixed_point
-fp_add_int (fixed_point a, int b)
+fp_add_int (fixed_point a, int n)
 {
-  return a + convert_int_to_fp (b);
+  return a + convert_int_to_fp (n);
 }
 
 /* Subtraction of two fixed point numbers */
@@ -49,9 +49,9 @@ fp_sub (fixed_point a, fixed_point b)
 
 /* Subtraction of a fixed point number and an integer */
 fixed_point
-fp_sub_int (fixed_point a, int b)
+fp_sub_int (fixed_point a, int n)
 {
-  return a - convert_int_to_fp (b);
+  return a - convert_int_to_fp (n);
 }
 
 /* Subtraction of two fixed point numbers */
@@ -63,9 +63,9 @@ fp_mul (fixed_point a, fixed_point b)
 
 /* Subtraction of a fixed point number and an integer */
 fixed_point
-fp_mul_int (fixed_point a, int b)
+fp_mul_int (fixed_point a, int n)
 {
-  return a * b;
+  return a * n;
 }
 
 /* Subtraction of two fixed point numbers */
@@ -77,7 +77,7 @@ fp_div (fixed_point a, fixed_point b)
 
 /* Subtraction of a fixed point number and an integer */
 fixed_point
-fp_div_int (fixed_point a, int b)
+fp_div_int (fixed_point a, int n)
 {
-  return a / b;
+  return a / n;
 }
