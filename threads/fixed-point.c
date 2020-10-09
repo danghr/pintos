@@ -5,7 +5,7 @@
 fixed_point
 convert_int_to_fp (int x)
 {
-  return x << FP_FRACTION_BITS;
+  return (fixed_point)(x << FP_FRACTION_BITS);
 }
 
 /* Convert a fixed point number to an integer
@@ -58,7 +58,7 @@ fp_sub_int (fixed_point a, int n)
 fixed_point
 fp_mul (fixed_point a, fixed_point b)
 {
-  return ((int64_t)a) * b >> FP_FRACTION_BITS;
+  return (fixed_point)(((int64_t)a) * b >> FP_FRACTION_BITS);
 }
 
 /* Subtraction of a fixed point number and an integer */
@@ -72,7 +72,7 @@ fp_mul_int (fixed_point a, int n)
 fixed_point
 fp_div (fixed_point a, fixed_point b)
 {
-  return ((int64_t)a) << FP_FRACTION_BITS / b;
+  return (fixed_point)((((int64_t)a) << FP_FRACTION_BITS) / b);
 }
 
 /* Subtraction of a fixed point number and an integer */
