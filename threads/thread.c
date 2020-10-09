@@ -285,34 +285,39 @@ thread_store_lock (struct lock *lock)
 {
   enum intr_level old_level = intr_disable ();
   list_insert_ordered (&thread_current()->locks,
-     &lock->elem,(list_less_func *) &lock_donation_compare, NULL);
+    &lock->elem,(list_less_func *) &lock_donation_compare, NULL);
   
-  if (lock->donated_priority > thread_current ()->priority)
+  /*if (lock->donated_priority > thread_current ()->priority)
   {
     thread_current ()->priority = lock->donated_priority;
     thread_yield();
-  }
+  }*/
   intr_set_level (old_level);
 }
 
 /* Priority donation */
 void
 thread_priority_donation (struct lock *lock)
-{
-  if (lock->holder == NULL)
-    return ;
-  
+{  
   /* Use it to achieve lock chain */
   struct lock *l_iterator;
   /* Donate the priority to the lock holder */
   l_iterator = lock;
   /* When the chain threads' priority is lower than the donated priority */ 
+  struct thread *current_thread = thread_current();
   while (l_iterator != NULL &&
-     l_iterator->donated_priority < thread_current ()->priority)
+     l_iterator->donated_priority < current_thread->priority)
   {
-    l_iterator->donated_priority = thread_current ()->priority;
+    l_iterator->donated_priority = current_thread->priority;
     thread_update_priority (l_iterator->holder);
     /* Go along the chain. */
+  if (l_iterator->holder->status == THREAD_READY)
+  {
+    list_remove (&l_iterator->holder->elem);
+    //list_sort (&ready_list, (list_less_func *)thread_priority_compare, NULL);
+    list_insert_ordered (&ready_list, &l_iterator->holder->elem, (list_less_func *) &thread_priority_compare, NULL);
+    list_sort(&ready_list,(list_less_func*) &thread_priority_compare, NULL);
+  }
     l_iterator = l_iterator->holder->lock_wait;
   }
 }
@@ -329,8 +334,7 @@ thread_update_priority (struct thread* a)
   /* Check the max priority of the lock. */
   if (!list_empty (&a->locks))
   {
-    /* We have insert the priority of the lock
-       with the decreasing order, so just pick up the front lock.*/
+    list_sort (&a->locks,(list_less_func*) &lock_donation_compare, NULL);
     lock_max_priority = list_entry (list_front (&a->locks),struct lock, elem)
       ->donated_priority;
     if (lock_max_priority > priority_wo_donation)
@@ -341,12 +345,6 @@ thread_update_priority (struct thread* a)
   else
     a->priority = priority_wo_donation;
   /*After change the priority, we need to reinsert the thread into ready queue. */
-  if (a->status == THREAD_READY)
-  {
-    list_remove (&a->elem);
-    //list_sort (&ready_list, (list_less_func *)thread_priority_compare, NULL);
-    list_insert_ordered (&ready_list, &a->elem, (list_less_func *)thread_priority_compare, NULL);
-  }
   intr_set_level(old_level);
 }
 

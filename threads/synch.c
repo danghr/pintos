@@ -217,17 +217,17 @@ lock_acquire (struct lock *lock)
   if (lock->holder != NULL)
   {
     thread_current ()->lock_wait = lock;
-    thread_priority_donation(lock);
+    thread_priority_donation (lock);
   }
   sema_down (&lock->semaphore);
 
   /* After acquire the lock, you need to store the lock. */
-  
+  enum intr_level old_level = intr_disable ();
   thread_current ()->lock_wait = NULL;
   lock->donated_priority = thread_current ()->priority;
   thread_store_lock (lock);
   lock->holder = thread_current ();
-
+  intr_set_level (old_level);
   /* Insert the lock into the list of locks in the thread */
   // list_insert_ordered (&(lock->holder->locks), &(lock->elem), 
   //   (list_less_func *) &lock_donation_compare, NULL);
@@ -269,17 +269,17 @@ lock_try_acquire (struct lock *lock)
    handler. */
 void
 lock_release (struct lock *lock) 
-{
+{ 
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
   lock->holder = NULL;
+  sema_up (&lock->semaphore);
   enum intr_level old_level = intr_disable ();
   list_remove (&lock->elem);
   thread_update_priority (thread_current ());
+  thread_yield();
   intr_set_level (old_level);
-  sema_up (&lock->semaphore);
-
 }
 
 /* Returns true if the current thread holds LOCK, false
@@ -366,13 +366,21 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
   ASSERT (lock_held_by_current_thread (lock));
 
   if (!list_empty (&cond->waiters)) {
-
+        list_sort (&cond->waiters, (list_less_func *) &cond_compare_priority,NULL);
         sema_up (&list_entry (list_pop_front (&cond->waiters),
                           struct semaphore_elem, elem)->semaphore);
   }
 
 }
 
+bool
+cond_compare_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+{
+  struct semaphore_elem *a1 = list_entry (a, struct semaphore_elem, elem);
+  struct semaphore_elem *b1 = list_entry (b, struct semaphore_elem, elem);
+  return list_entry (list_front (&a1->semaphore.waiters), struct thread, elem)->priority > 
+          list_entry (list_front (&b1->semaphore.waiters), struct thread, elem)->priority;
+}
 /* Wakes up all threads, if any, waiting on COND (protected by
    LOCK).  LOCK must be held before calling this function.
 
