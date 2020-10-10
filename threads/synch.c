@@ -131,7 +131,7 @@ sema_up (struct semaphore *sema)
   /* Then the thread waiting can get the information. */
 
   /* After unblocking the thread, yield it so that it will be put
-     into waiting list in correct order. */
+     into ready list in correct order. */
   thread_yield();
 
   intr_set_level (old_level);
@@ -300,8 +300,6 @@ lock_release (struct lock *lock)
       list_remove (&lock->elem);
       thread_update_priority (thread_current ());
     }
-
-
   sema_up (&lock->semaphore);
 
   intr_set_level (old_level);

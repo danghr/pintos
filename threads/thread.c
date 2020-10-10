@@ -347,12 +347,8 @@ thread_update_priority (struct thread* a)
   /* If the thread is holding some locks. */
   if (!list_empty (&a->locks))
   {
-    /* Sort the list and get the first item. */
-    list_sort (&a->locks, (list_less_func*) &lock_donation_compare,
-      NULL);
-    lock_max_priority = 
-      list_entry (list_front (&a->locks), struct lock, elem)
-      ->donated_priority;
+    /* Get the maxlock in thread.locks. */
+    lock_max_priority = thread_get_maxlock(a);
     
     /* Set the priority as the largest one among those donated
        by the locks and the original one of the thread. */
@@ -366,6 +362,18 @@ thread_update_priority (struct thread* a)
     a->priority = priority_wo_donation;
   
   intr_set_level(old_level);
+}
+
+/* Get the max donated priority from the locks. */
+int 
+thread_get_maxlock(struct thread *t)
+{
+  int max_priority;
+  list_sort (&t->locks, (list_less_func*) &lock_donation_compare,NULL);
+  max_priority = 
+    list_entry (list_front (&t->locks), struct lock, elem)
+    ->donated_priority;
+  return max_priority;
 }
 
 /* Priority compare function. */
