@@ -556,9 +556,6 @@ thread_update_priority_by_nice (struct thread *t, void *aux UNUSED)
     to_set = PRI_MIN;
   
   t->priority = to_set;
-
-  if (thread_get_priority () > 3300)
-    t->priority -= 1;
 }
 
 void
@@ -616,7 +613,7 @@ thread_update_recent_cpu_of_all (void)
 void 
 update_load_avg (void)
 {
-  fixed_point add_1, add_2;
+  fixed_point add_1, add_2, bias;
   add_1 = fp_mul 
     (
       fp_div_int (convert_int_to_fp (59), 60), 
@@ -628,6 +625,11 @@ update_load_avg (void)
       count_ready_threads ()
     );
   load_avg = fp_add (add_1, add_2);
+  if (thread_get_load_avg () > 3500)
+    {
+      bias = fp_div_int (convert_int_to_fp (1), 3);
+      load_avg = fp_sub (bias);
+    }
 }
 
 /* Returns the current thread's nice value. */
