@@ -327,16 +327,7 @@ thread_priority_donation (struct lock *lock)
          updated. */
       l_iterator->donated_priority = current_thread->priority;
       thread_update_priority (l_iterator->holder);
-
-      if (l_iterator->holder->status == THREAD_READY)
-        {
-          /* Put the holder thread of the lock in the correct place
-             of the ready list. */
-          list_remove (&l_iterator->holder->elem);
-          list_insert_ordered (&ready_list, &l_iterator->holder->elem, 
-            (list_less_func *)thread_priority_compare, NULL);
-        }
-
+ 
       /* Go along the chain (A waiting for B and B waiting for C). */
       l_iterator = l_iterator->holder->lock_wait;
     }
