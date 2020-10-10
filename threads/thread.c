@@ -514,28 +514,23 @@ thread_get_priority (void)
 void
 thread_set_nice (int nice) 
 {
-  enum intr_level old_level;
   ASSERT (!intr_context ());
-
-  old_level = intr_disable ();
 
   struct thread *t = thread_current ();
   t->nice = nice;
 
   /* Calculate the new priority */
-  thread_update_priority_by_nice (t);
+  thread_update_priority_by_nice (t, NULL);
 
   /* Yield current process since there is no 
      interrupt currently and thread priority
      may get changed */
   thread_yield ();
-
-  intr_set_level (old_level);
 }
 
 /* Update the priority according to "nice" value */
 void 
-thread_update_priority_by_nice (struct thread *t)
+thread_update_priority_by_nice (struct thread *t, void *aux UNUSED)
 {
   if (t == idle_thread)
     return ;
@@ -545,20 +540,15 @@ thread_update_priority_by_nice (struct thread *t)
   // msg ("Now thread %s: nice: %d", t->name, t->nice);
 
   int to_set = convert_fp_to_int_nearest( 
-    fp_sub_int (
+    fp_sub (
       fp_sub (
         convert_int_to_fp (PRI_MAX), 
         fp_div_int (t->recent_cpu, 4)
       ), 
-      t->nice / 2
+      fp_mul_int (t->nice, 2)
     )
   );
   
-  /* It seems that with these lines, the following testcases 
-     would not pass. But why? 
-     * mlfqs-load-60
-     * mlfqs-fair-20
-     */
   if (to_set > PRI_MAX)
     to_set = PRI_MAX;
   if (to_set < PRI_MIN)
@@ -597,7 +587,6 @@ thread_update_recent_cpu (struct thread *t)
       fp_mul (recent_cpu_coe, t->recent_cpu), 
       t->nice
     );
-  thread_update_priority_by_nice (t);
 }
 
 /* Update the recent_cpu for all threads
@@ -763,10 +752,13 @@ init_thread (struct thread *t, const char *name, int priority)
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
-  t->priority = priority;
   t->lock_wait = NULL;
-  t->priority_wo_donation = priority;
   t->magic = THREAD_MAGIC;
+  if (!thread_mlfqs)
+    {
+      t->priority = priority;
+      t->priority_wo_donation = priority;
+    }
 
   /* Ensure sleeping_ticks == 0 when the thread is initialized */
   t->sleeping_ticks = 0;
@@ -787,6 +779,10 @@ init_thread (struct thread *t, const char *name, int priority)
   else
     t->nice = thread_get_nice ();
   t->recent_cpu = convert_int_to_fp (0);
+
+  /* Initializes priority of advanced schedular */
+  if (thread_mlfqs)
+    thread_update_priority_by_nice (t, NULL);
 
   old_level = intr_disable ();
   /* Push the initiated thread into all_list in priority order */
