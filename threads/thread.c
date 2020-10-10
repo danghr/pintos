@@ -515,6 +515,10 @@ void
 thread_set_nice (int nice) 
 {
   ASSERT (!intr_context ());
+  if (nice < NICE_MIN)
+    nice = NICE_MIN;
+  else if (nice > NICE_MAX)
+    nice = NICE_MAX;
 
   struct thread *t = thread_current ();
   t->nice = nice;
@@ -537,15 +541,13 @@ thread_update_priority_by_nice (struct thread *t, void *aux UNUSED)
   
   ASSERT (thread_mlfqs);
 
-  // msg ("Now thread %s: nice: %d", t->name, t->nice);
-
   int to_set = convert_fp_to_int_nearest( 
-    fp_sub (
+    fp_sub_int (
       fp_sub (
         convert_int_to_fp (PRI_MAX), 
         fp_div_int (t->recent_cpu, 4)
       ), 
-      fp_mul_int (t->nice, 2)
+      t->nice * 2
     )
   );
   
@@ -624,12 +626,6 @@ update_load_avg (void)
       count_ready_threads ()
     );
   load_avg = fp_add (add_1, add_2);
-
-  /* Fix problem on mlfqs-load-60 
-     (and other possible bias)
-     which is definitely not a good idea. */
-  if (thread_get_load_avg () > 3800)
-    load_avg = fp_sub_int (load_avg, 1);
 }
 
 /* Returns the current thread's nice value. */
@@ -901,14 +897,6 @@ allocate_tid (void)
   lock_release (&tid_lock);
 
   return tid;
-}
-
-/* Sort the ready list. */
-void
-sort_ready_list(void)
-{
-  list_sort (&ready_list, 
-    (list_less_func *) &thread_priority_compare, NULL);
 }
 
 /* Offset of `stack' member within `struct thread'.

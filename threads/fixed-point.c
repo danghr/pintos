@@ -5,79 +5,97 @@
 fixed_point
 convert_int_to_fp (int x)
 {
-  return (fixed_point)(x << FP_FRACTION_BITS);
+  fixed_point ret;
+  ret.value = x << FP_FRACTION_BITS;
+  return ret;
 }
 
 /* Convert a fixed point number to an integer
    (Rounding toward zero). */
-fixed_point
+int
 convert_fp_to_int_zero (fixed_point x)
 {
-  return x >> FP_FRACTION_BITS;
+  return x.value >> FP_FRACTION_BITS;
 }
 
 /* Convert a fixed point number to an integer
    (Rounding to nearest). */
-fixed_point
+int
 convert_fp_to_int_nearest (fixed_point x)
 {
-  if (x >= 0)
-    return (x + (FP_FRACTION_BITS >> 1)) >> FP_FRACTION_BITS;
-  return (x - (FP_FRACTION_BITS >> 1)) >> FP_FRACTION_BITS;
+  if (x.value >= 0)
+    return (x.value + (FP_FRACTION_BITS >> 1)) >> FP_FRACTION_BITS;
+  return (x.value - (FP_FRACTION_BITS >> 1)) >> FP_FRACTION_BITS;
 }
 
 /* Addition of two fixed point numbers. */
 fixed_point
 fp_add (fixed_point a, fixed_point b)
 {
-  return a + b;
+  fixed_point ret;
+  ret.value = a.value + b.value;
+  return ret;
 }
 
 /* Addition of a fixed point number and an integer. */
 fixed_point
 fp_add_int (fixed_point a, int n)
 {
-  return a + convert_int_to_fp (n);
+  fixed_point ret;
+  ret.value = a.value + convert_int_to_fp (n).value;
+  return ret;
 }
 
 /* Subtraction of two fixed point numbers. */
 fixed_point
 fp_sub (fixed_point a, fixed_point b)
 {
-  return a - b;
+  fixed_point ret;
+  ret.value = a.value - b.value;
+  return ret;
 }
 
 /* Subtraction of a fixed point number and an integer. */
 fixed_point
 fp_sub_int (fixed_point a, int n)
 {
-  return a - convert_int_to_fp (n);
+  fixed_point ret;
+  ret.value = a.value - convert_int_to_fp (n).value;
+  return ret;
 }
 
 /* Subtraction of two fixed point numbers. */
 fixed_point
 fp_mul (fixed_point a, fixed_point b)
 {
-  return (fixed_point)(((int64_t)a) * b >> FP_FRACTION_BITS);
+  fixed_point ret;
+  ret.value = ((int64_t)a.value) * b.value >> FP_FRACTION_BITS;
+  return ret;
 }
 
 /* Subtraction of a fixed point number and an integer. */
 fixed_point
 fp_mul_int (fixed_point a, int n)
 {
-  return a * n;
+  fixed_point ret;
+  ret.value = a.value * n;
+  return ret;
 }
 
 /* Subtraction of two fixed point numbers. */
 fixed_point
 fp_div (fixed_point a, fixed_point b)
 {
-  return (fixed_point)((((int64_t)a) << FP_FRACTION_BITS) / b);
+  fixed_point ret;
+  ret.value = (((int64_t)a.value) << FP_FRACTION_BITS) / b.value;
+  return ret;
 }
 
 /* Subtraction of a fixed point number and an integer. */
 fixed_point
 fp_div_int (fixed_point a, int n)
 {
-  return a / n;
+  fixed_point ret;
+  ret.value = a.value / n;
+  return ret;
 }

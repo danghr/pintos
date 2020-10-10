@@ -4,13 +4,16 @@
 #include <stdio.h>
 
 /* Definition of fixed-point numbers. */
-typedef int fixed_point;
+typedef struct 
+{
+    int value;
+} fixed_point;
 
 #define FP_FRACTION_BITS 14
 
 fixed_point convert_int_to_fp (int x);
-fixed_point convert_fp_to_int_zero (fixed_point x);
-fixed_point convert_fp_to_int_nearest (fixed_point x);
+int convert_fp_to_int_zero (fixed_point x);
+int convert_fp_to_int_nearest (fixed_point x);
 fixed_point fp_add (fixed_point a, fixed_point b);
 fixed_point fp_add_int (fixed_point a, int b);
 fixed_point fp_sub (fixed_point a, fixed_point b);
