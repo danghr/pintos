@@ -897,6 +897,16 @@ allocate_tid (void)
 
   return tid;
 }
+
+/* Sort the ready list. 
+   Should only be used in external interruptions, 
+   where ready lists need to be modified.  */
+void
+sort_ready_list (void)
+{
+  ASSERT (intr_context ());
+  list_sort (&ready_list, thread_priority_compare, NULL);
+}
 
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
