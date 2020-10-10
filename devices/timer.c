@@ -258,7 +258,7 @@ real_time_sleep (int64_t num, int32_t denom)
         (NUM / DENOM) s          
      ---------------------- = NUM * TIMER_FREQ / DENOM ticks. 
      1 s / TIMER_FREQ ticks
- . */
+  */
   int64_t ticks = num * TIMER_FREQ / denom;
 
   ASSERT (intr_get_level () == INTR_ON);
