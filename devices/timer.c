@@ -211,7 +211,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
           thread_foreach (
             (thread_action_func *) &thread_update_priority_by_nice, 
             NULL);
-          sort_ready_list ();
+          // sort_ready_list ();
         }
     }
   
