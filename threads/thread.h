@@ -26,9 +26,9 @@ typedef int tid_t;
 #define PRI_MAX 63                      /* Highest priority. */
 
 /* Nice priorities. */
-#define NICE_MIN -20                    /* Lowest priority. */
-#define NICE_DEFAULT 0                  /* Default priority. */
-#define NICE_MAX 20                     /* Highest priority. */
+#define NICE_MIN -20                    /* Lowest "nice" value. */
+#define NICE_DEFAULT 0                  /* Default "nice" value. */
+#define NICE_MAX 20                     /* Highest "nice" value. */
 
 /* A kernel thread or user process.
 
@@ -95,7 +95,7 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
-    int64_t sleeping_ticks;             /* A counter of remaining sleeping ticks */
+    int64_t sleeping_ticks;             /* A counter of remaining sleeping ticks. */
    
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
@@ -108,14 +108,14 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
 
-   /* Variables used in priority donation */
-    struct list locks;                  /* List of holding locks */
-    int priority_wo_donation;           /* Priority without donation */
-    struct lock *lock_wait;             /* The lock a thread is waiting for */
+   /* Variables used in priority donation. */
+    struct list locks;                  /* List of holding locks. */
+    int priority_wo_donation;           /* Priority without donation. */
+    struct lock *lock_wait;             /* The lock a thread is waiting for. */
 
-   /* Variables used in advanced schedular */
-    int nice;                           /* "nice" value of a thread */
-    fixed_point recent_cpu;             /* "recent_cpu" value of a thread */
+   /* Variables used in advanced schedular. */
+    int nice;                           /* "nice" value of a thread. */
+    fixed_point recent_cpu;             /* "recent_cpu" value of a thread. */
   };
 
 /* If false (default), use round-robin scheduler.

@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-/* Definition of fixed-point numbers */
+/* Definition of fixed-point numbers. */
 typedef int fixed_point;
 
 #define FP_FRACTION_BITS 14

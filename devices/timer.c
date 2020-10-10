@@ -72,10 +72,10 @@ int64_t
 timer_ticks (void) 
 {
   /* Disable the interrupts to make sure that the operation of
-     getting the ticks is atomic (i.e. cannot be interrupted) */
+     getting the ticks is atomic (i.e. cannot be interrupted). */
   enum intr_level old_level = intr_disable ();
   int64_t t = ticks;
-  /* Restore the interrupt status */
+  /* Restore the interrupt status. */
   intr_set_level (old_level);
   return t;
 }
@@ -95,14 +95,14 @@ timer_sleep (int64_t ticks)
 {
   ASSERT (intr_get_level () == INTR_ON);
   
-  /* Note that the ticks can be 0 or negative */
+  /* Note that the ticks can be 0 or negative. */
   if (ticks <= 0)
     return ;
   
-  /* Ensure the atomic operation */
+  /* Ensure the atomic operation. */
   enum intr_level old_level = intr_disable ();
 
-  /* Set the counter of the current thread and block it */
+  /* Set the counter of the current thread and block it. */
   thread_current ()->sleeping_ticks = ticks;
   thread_block ();
   
@@ -189,24 +189,24 @@ timer_interrupt (struct intr_frame *args UNUSED)
 
   thread_tick ();
 
-  /* Advanced scheduler */
+  /* Advanced scheduler. */
   if (thread_mlfqs)
     {
-      /* Executed every tick */
-      /* Increase recent_cpu of running thread by 1 */
+      /* Executed every tick. */
+      /* Increase recent_cpu of running thread by 1. */
       thread_update_recent_cpu_by_one ();
       if (ticks % TIMER_FREQ == 0)
         {
-          /* Executed every second */
-          /* Update load_avg */
+          /* Executed every second. */
+          /* Update load_avg. */
           update_load_avg ();
-          /* Update every thread's recent_cpu */
+          /* Update every thread's recent_cpu. */
           thread_update_recent_cpu_of_all ();
         }
       if (ticks % 4 == 0)
         {
-          /* Executed every four ticks */
-          /* Update priority for all threads */
+          /* Executed every four ticks. */
+          /* Update priority for all threads. */
           thread_foreach (
             (thread_action_func *) &thread_update_priority_by_nice, 
             NULL);
@@ -258,7 +258,7 @@ real_time_sleep (int64_t num, int32_t denom)
         (NUM / DENOM) s          
      ---------------------- = NUM * TIMER_FREQ / DENOM ticks. 
      1 s / TIMER_FREQ ticks
-  */
+ . */
   int64_t ticks = num * TIMER_FREQ / denom;
 
   ASSERT (intr_get_level () == INTR_ON);

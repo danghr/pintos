@@ -68,7 +68,7 @@ sema_down (struct semaphore *sema)
 
   old_level = intr_disable ();
 
-  /* When the lock is not released */
+  /* When the lock is not released. */
   while (sema->value == 0) 
     {
       list_push_back (&sema->waiters, &thread_current ()->elem);
@@ -128,10 +128,10 @@ sema_up (struct semaphore *sema)
         struct thread, elem));
     }
   sema->value++;
-  /* Then the thread waiting can get the information */
+  /* Then the thread waiting can get the information. */
 
   /* After unblocking the thread, yield it so that it will be put
-     into waiting list in correct order */
+     into waiting list in correct order. */
   thread_yield();
 
   intr_set_level (old_level);
@@ -180,7 +180,7 @@ bool
 lock_donation_compare (const struct list_elem *a, 
   const struct list_elem *b, void *aux UNUSED)
 {
-  /* Use the list_entry to transform the elem to struct thread */
+  /* Use the list_entry to transform the elem to struct thread. */
   return list_entry (a, struct lock, elem)->donated_priority > 
     list_entry(b,struct lock, elem)->donated_priority;
 }
@@ -227,21 +227,21 @@ lock_acquire (struct lock *lock)
 
   enum intr_level old_level;
 
-  /* If the lock is occupied by other threads */
+  /* If the lock is occupied by other threads. */
   if (lock->holder != NULL)
     {
       thread_current ()->lock_wait = lock;
       /* Do priority donation so that the order of execution is 
-        correct and to avoid priority inversion */
+        correct and to avoid priority inversion. */
       thread_priority_donation (lock);
     }
 
-  /* Wait for the lock to be released */
+  /* Wait for the lock to be released. */
   sema_down (&lock->semaphore);
 
   old_level = intr_disable ();
 
-  /* After acquiring the lock, store it in the thread */
+  /* After acquiring the lock, store it in the thread. */
   if (!thread_mlfqs)
     {
       thread_current ()->lock_wait = NULL;
@@ -272,7 +272,7 @@ lock_try_acquire (struct lock *lock)
 
   if (success) 
     {
-      /* Get lock, no need to donate priority */
+      /* Get lock, no need to donate priority. */
       lock->holder = thread_current ();
     }
   
@@ -293,7 +293,7 @@ lock_release (struct lock *lock)
   enum intr_level old_level = intr_disable ();
 
   /* Release the lock, remove it from the thread and restore
-     its priority due to possible donation */
+     its priority due to possible donation. */
   lock->holder = NULL;
   if (!thread_mlfqs)
     {
@@ -309,7 +309,7 @@ lock_release (struct lock *lock)
 
 /* Returns true if the current thread holds LOCK, false
    otherwise.  (Note that testing whether some other thread holds
-   a lock would be racy.) */
+   a lock would be racy.). */
 bool
 lock_held_by_current_thread (const struct lock *lock) 
 {
@@ -397,7 +397,7 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
     }
 }
 
-/* Condition sorting function */
+/* Condition sorting function. */
 bool
 cond_compare_priority (const struct list_elem *a, 
   const struct list_elem *b, void *aux UNUSED)
