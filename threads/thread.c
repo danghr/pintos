@@ -556,6 +556,9 @@ thread_update_priority_by_nice (struct thread *t, void *aux UNUSED)
     to_set = PRI_MIN;
   
   t->priority = to_set;
+
+  if (thread_get_priority () > 3300)
+    t->priority -= 1;
 }
 
 void
