@@ -163,7 +163,7 @@ struct lock
                 \noindent \begin{figure}[H]
                     \centering
                     \includegraphics[width=25em]{pic.jpg}
-                    \caption{Caption}
+                    \caption{Nested Donation}
                     \label{fig:my_label}
                 \end{figure}
 
@@ -270,7 +270,7 @@ fixed_point load_avg;\end{verbatim}
 
             \subsubsection{How is the way you divided the cost of scheduling between code inside and outside interrupt context likely to affect performance? }
 
-            Actually no specification is done. 
+            Either when changing the \texttt{nice} by the thread itself or during an interrupt, the ready thread will be put into \texttt{ready\_list} according to the priority, so there seems to be small difference between these two situations in our implementation. 
 
         \subsection{Rationale}
 
@@ -278,7 +278,7 @@ fixed_point load_avg;\end{verbatim}
 
             \begin{enumerate}
                 \item \textbf{Advantages:} Easy to implement and resource-saving, as it uses the original scheduler in task \ref{Priority Scheduling} and maintains only one list according to the calculated priority. 
-                \item \textbf{Disadvantages:} Not enough consideration of interrupt context, and the stability still need to be improved. Also, complex scheduling algorithms considering not only calculated priority is not convenient to implement under this design. 
+                \item \textbf{Disadvantages:} The stability and performance of the scheduler still need to be improved. Also, complex scheduling algorithms considering not only calculated priority is not convenient to implement under this design. 
                 \item \textbf{Things to do:} Figure out more about execution inside and outside interrupt context, and improve the stability by marking atomic operations, etc. 
             \end{enumerate}
 
