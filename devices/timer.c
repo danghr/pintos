@@ -205,13 +205,11 @@ timer_interrupt (struct intr_frame *args UNUSED)
         }
       if (ticks % 4 == 0)
         {
-          // msg ("Now in thread %s and four ticks passed", thread_current ()->name);
           /* Executed every four ticks. */
           /* Update priority for all threads. */
           thread_foreach (
             (thread_action_func *) &thread_update_priority_by_nice, 
             NULL);
-          // sort_ready_list ();
         }
     }
   
