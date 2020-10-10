@@ -628,7 +628,7 @@ update_load_avg (void)
   if (thread_get_load_avg () > 3500)
     {
       bias = fp_div_int (convert_int_to_fp (1), 3);
-      load_avg = fp_sub (bias);
+      load_avg = fp_sub (load_avg, bias);
     }
 }
 
