@@ -30,6 +30,7 @@
         \state{2018533074}
     }
     \email{zhangty2@shanghaitech.edu.cn}
+
     \author{Haoran Dang}
     \affiliation{%
         \institution{School of Information Science and Technology}
@@ -56,11 +57,12 @@
         \subsection{Acknowledgements}
         
             \begin{itemize}
-                \item \url{https://www.cnblogs.com/laiy/p/pintos_project1_thread.html}: To help get familiar with current code structure and how it works. 
                 \item \url{https://www.runoob.com/cprogramming/c-enum.html}: To understand \texttt{enum} in the code. 
             \end{itemize} 
     
     \section{Alarm Clock}
+            
+        \label{Alarm Clock}
     
         \subsection{Data Structures}
         
@@ -121,6 +123,8 @@ intr_set_level (old_level);
     
     \section{Priority Scheduling}
 
+        \label{Priority Scheduling}
+
         \subsection{Data Structures}
             
             \subsubsection{Copy here the declaration of each new or changed `\texttt{struct}' or `\texttt{struct}' member, global or static variable, `\texttt{typedef}', or enumeration. Identify the purpose of each in 25 words or less. } 
@@ -149,6 +153,32 @@ intr_set_level (old_level);
             
             \subsubsection{Copy here the declaration of each new or changed `\texttt{struct}' or `\texttt{struct}' member, global or static variable, `\texttt{typedef}', or enumeration. Identify the purpose of each in 25 words or less. } 
 
+                \begin{itemize}
+                    \item In file \texttt{threads/threads.h}
+\begin{verbatim}
+...
+/* Lowest "nice" value. */
+#define NICE_MIN -20
+/* Default "nice" value. */
+#define NICE_DEFAULT 0
+/* Highest "nice" value. */
+#define NICE_MAX 20
+...
+struct thread
+  {
+    ...
+    /* "nice" value of a thread */
+    int nice;
+    /* "recent_cpu" value of a thread */
+    fixed_point recent_cpu;
+    ...
+  }\end{verbatim}
+                    \item In file \texttt{threads/threads.c}
+\begin{verbatim}
+/* System load average */
+fixed_point load_avg;\end{verbatim}
+                \end{itemize}
+
         \subsection{Algorithms}
 
             \subsubsection{Suppose threads A, B, and C have nice values 0, 1, and 2. Each has a \texttt{recent\_cpu} value of 0. Fill in the table below showing the scheduling decision and the \texttt{priority} and \texttt{recent\_cpu} values for each thread after each given number of timer ticks:} 
@@ -159,30 +189,34 @@ intr_set_level (old_level);
                         \cline{2-7}
                         & A & B & C & A & B & C & \\
                         \hline
-                        0 &  &  &  &  &  &  & \\
+                        0 & 0 & 0 & 0 & 63 & 61 & 59 & A \\
                         \hline
-                        4 &  &  &  &  &  &  & \\
+                        4 & 4 & 0 & 0 & 62 & 61 & 59 & A \\
                         \hline
-                        8 &  &  &  &  &  &  & \\
+                        8 & 8 & 0 & 0 & 61 & 61 & 59 & B \\
                         \hline
-                        12 &  &  &  &  &  &  & \\
+                        12 & 8 & 4 & 0 & 61 & 60 & 59 & A \\
                         \hline
-                        16 &  &  &  &  &  &  & \\
+                        16 & 12 & 4 & 0 & 60 & 60 & 59 & B \\
                         \hline
-                        20 &  &  &  &  &  &  & \\
+                        20 & 12 & 8 & 0 & 60 & 59 & 59 & A \\
                         \hline
-                        24 &  &  &  &  &  &  & \\
+                        24 & 16 & 8 & 0 & 59 & 59 & 59 & C \\
                         \hline
-                        28 &  &  &  &  &  &  & \\
+                        28 & 16 & 8 & 4 & 59 & 59 & 58 & B \\
                         \hline
-                        32 &  &  &  &  &  &  & \\
+                        32 & 16 & 12 & 4 & 59 & 58 & 58 & A \\
                         \hline
-                        36 &  &  &  &  &  &  & \\
+                        36 & 20 & 12 & 4 & 58 & 58 & 58 & C \\
                         \hline
                     \end{tabular}
                 \end{center}
             
             \subsubsection{Did any ambiguities in the scheduler specification make values in the table uncertain? If so, what rule did you use to resolve them? Does this match the behavior of your scheduler? }
+
+            Yes, since the specification does not mention what the shceduler will do if the calculated priority of the two threads is the same. 
+
+            Just as our implementation in task \ref{Alarm Clock} and \ref{Priority Scheduling}, the ready list is maintained as a priority list, and the sorting method will insert the item at the place after the items with same priority in the list. The value in this table uses the method similar to our implementation. 
 
             \subsubsection{How is the way you divided the cost of scheduling between code inside and outside interrupt context likely to affect performance? }
 
