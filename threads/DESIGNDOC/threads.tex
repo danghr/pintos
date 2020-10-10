@@ -2,13 +2,14 @@
 % https://www.acm.org/publications/proceedings-template
 % The ACM Latex guide provides further information about the ACM template
 
-\documentclass[sigconf, nonacm]{acmart}
+\documentclass[sigconf, nonacm, balance=false, urlbreakonhyphens=true]{acmart}
 \usepackage{amsmath, amsfonts, amsthm}
 \usepackage{url}
 \usepackage{makecell}
 \usepackage{multirow}
 \usepackage{longtable}
 \usepackage{verbatim}
+\usepackage{makecell}
 
 % Allow URL Breakline
 \def\UrlBreaks{\do\A\do\B\do\C\do\D\do\E\do\F\do\G\do\H\do\I\do\J
@@ -54,10 +55,10 @@
         %% Please cite any offline or online sources you consulted while
         %% preparing your submission, other than the Pintos documentation, course
         %% text, lecture notes, and course staff.
-        \subsection{Acknowledgements}
+        \subsection{References}
         
             \begin{itemize}
-                \item \url{https://www.runoob.com/cprogramming/c-enum.html}: To understand \texttt{enum} in the code. 
+                \item \url{https://www.runoob.com/cprogramming/c-enum.html}: \\To understand \texttt{enum} in the code. 
             \end{itemize} 
     
     \section{Alarm Clock}
@@ -72,12 +73,12 @@
                     \item In file \texttt{threads/threads.h}
 \begin{verbatim}
 struct thread
-  {
-    ...
-    /* A counter of remaining sleeping ticks */
-    int64_t sleeping_ticks;
-    ...
-  }\end{verbatim}
+{
+  ...
+  /* A counter of remaining sleeping ticks */
+  int64_t sleeping_ticks;
+  ...
+}\end{verbatim}
                 \end{itemize}
         
         \subsection{Algorithms}
@@ -129,25 +130,74 @@ intr_set_level (old_level);
             
             \subsubsection{Copy here the declaration of each new or changed `\texttt{struct}' or `\texttt{struct}' member, global or static variable, `\texttt{typedef}', or enumeration. Identify the purpose of each in 25 words or less. } 
 
-            \subsubsection{Explain the data structure used to track priority donation. Use ASCII art to diagram a nested donation.  (Alternately, submit a .png file.)}
+                \begin{itemize}
+                    \item In file \texttt{threads/threads.h}
+\begin{verbatim}
+struct thread
+{
+  ...
+  /* List of holding locks. */
+  struct list locks; 
+  /* Priority without donation. */
+  int priority_wo_donation;
+  /* The lock a thread is waiting for. */
+  struct lock *lock_wait;             
+  ...
+}
+\end{verbatim}
+                    \item In file \texttt{threads/synch.h}
+\begin{verbatim}
+struct lock
+{
+  ...
+  /* Priority donated by this lock. */   
+  int donated_priority;              
+  ...
+}
+\end{verbatim}
+                \end{itemize}
+
+            \subsubsection{Explain the data structure used to track priority donation. Use ASCII art to diagram a nested donation.  (Alternately, submit a \texttt{.png} file.)}
+
+                We use \texttt{lock* lock\_wait} to find the thread we are donating. And we store the locks held by the current thread in \texttt{thread.locks}. In the locks we store the priority donated by another thread which means we can find the max donated priority.
+                \noindent \begin{figure}[H]
+                    \centering
+                    \includegraphics[width=25em]{pic.jpg}
+                    \caption{Caption}
+                    \label{fig:my_label}
+                \end{figure}
 
         \subsection{Algorithms}
 
-            \subsubsection{How do you ensure that the highest priority thread waiting for a lock, semaphore, or condition variable wakes up first? }
+            \subsubsection{How do you ensure that the highest priority thread waiting for a lock, semaphore, or condition variable wakes up first? } 
+            
+                We have already push all the blocked threads in the \texttt{sema.waiters} or \texttt{cond.waiters} when we block the threads. Therefore the only thing we need to do is sort the waiting list with the order of the thread's priority.Then the front element is the thread we want.
 
             \subsubsection{Describe the sequence of events when a call to \texttt{lock\_acquire()} causes a priority donation. How is nested donation handled? }
 
-            \subsubsection{Describe the sequence of events when \texttt{lock\_release()} is called on a lock that a higher-priority thread is waiting for.}
+                When we call the \texttt{lock\_acquire()} we check whether the lock has a holder. Then we use the lock to locate its holder, update the holder's priority if the current thread's priority is higher. After that we will check the holder's \texttt{lock\_wait} then we can update the priority donated by holder if there is a thread holds a lock that holder wants to acquire. After doing the iterations, we will update the priority in a nested situation.
+
+            \subsubsection{Describe the sequence of events when \texttt{lock\_release()} is called on a lock that a higher-priority thread is waiting for. }
+
+                We will clear the \texttt{lock->holder} then reomove the lock from current thread's locks list. Then we call \texttt{thread\_update\_priority()} to update current thread's priority. Then we will use \texttt{sema\_down()} to unblock the thread which tried to acquire the lock, pop it from the waiting list. Then use \texttt{thread\_yield} to switch to the new thread. 
 
         \subsection{Synchronization}
 
             \subsubsection{Describe a potential race in \texttt{thread\_set\_priority()} and explain how your implementation avoids it.  Can you use a lock to avoid this race? }
 
+                When we call \texttt{thread\_set\_priority()} to set a thread which has been donated by a higher priority, we cannot just change this thread's priority. We need to store the priority and then update to this priority after the donation.
+
+                We just have a variable named \texttt{priority\_wo\_donation} to store the base priority. We just change this value if current thread is donated by another thread. And we cannot use a lock to avoid this race.
+
         \subsection{Rationale}
 
             \subsubsection{Why did you choose this design? In what ways is it superior to another design you considered? }
 
+                We choose the design because we could use the \texttt{thread.locks} to get the highest priority donated by multiple threads easily. \texttt{thread.lock\_wait} enablesus to  find the thread we donate to. \texttt{lock.donated\_priority} will avoid the race for changing the priority of the current thread.
+
     \section{Advanced Scheduler}
+
+        \label{Advanced Scheduler}
 
         \subsection{Data Structures}
             
@@ -220,23 +270,82 @@ fixed_point load_avg;\end{verbatim}
 
             \subsubsection{How is the way you divided the cost of scheduling between code inside and outside interrupt context likely to affect performance? }
 
+            Actually no specification is done. 
+
         \subsection{Rationale}
 
             \subsubsection{Briefly critique your design, pointing out advantages and disadvantages in your design choices. If you were to have extra time to work on this part of the project, how might you choose to refine or improve your design? }
 
+            \begin{enumerate}
+                \item \textbf{Advantages:} Easy to implement and resource-saving, as it uses the original scheduler in task \ref{Priority Scheduling} and maintains only one list according to the calculated priority. 
+                \item \textbf{Disadvantages:} Not enough consideration of interrupt context, and the stability still need to be improved. Also, complex scheduling algorithms considering not only calculated priority is not convenient to implement under this design. 
+                \item \textbf{Things to do:} Figure out more about execution inside and outside interrupt context, and improve the stability by marking atomic operations, etc. 
+            \end{enumerate}
+
             \subsubsection{The assignment explains arithmetic for fixed-point math in detail, but it leaves it open to you to implement it. Why did you decide to implement it the way you did? If you created an abstraction layer for fixed-point math, that is, an abstract data type and/or a set of functions or macros to manipulate fixed-point numbers, why did you do so? If not, why not?}
+
+            Fixed-point numbers and opeartions are implemented in \texttt{threads/fixed-point.h} and \texttt{fixed-point.c}, in which we use a \texttt{struct}, containing only one \texttt{int} number, and a set of function. 
+            
+            Although (maybe) not all the functions are used, implementing it will reduce the workload afterwards and will make the code neat than directly showing a lot of computation processes. Meanwhile, using a \texttt{struct} instead of \texttt{typedef int fixed\_point} can directly show misuse of the types in the compiler, so that we don't need to worry about wrong type conversion. 
     
     \section{Survey Questions}
 
         \subsubsection*{In your opinion, was this assignment, or any one of the three problems in it, too easy or too hard? Did it take too long or too little time? }
 
+            Tasks in project 1 are not quite "hard" yet but it does require a lot of time since the operating system is a complex task. 
+
         \subsubsection*{Did you find that working on a particular part of the assignment gave you greater insight into some aspect of OS design? }
+
+            Working on \texttt{timer\_sleep} and \texttt{timer\_interrupt} in task \ref{Alarm Clock} and \ref{Advanced Scheduler} offers us a direct impression on what happens when CPU ticks. Meanwhile, in \ref{Priority Scheduling} we considered a lot of different situations, which inspires us to understand how nested changes take place in the operating system. 
 
         \subsubsection*{Is there some particular fact or hint we should give students in future quarters to help them solve the problems? Conversely, did you find any of our guidance to be misleading? }
 
+            Actually no. But I guess it would be slightly better if the TAs can introduce some Git GUI softwares as they can increase the efficiency when using complex functions sometimes. 
+
         \subsubsection*{Do you have any suggestions for the TAs to more effectively assist students, either for future quarters or the remaining projects? }
 
+            Not yet. 
+
         \subsubsection*{Any other comments? }
+
+            Not yet. 
+    
+    \section*{Contributors}
+
+        \begin{center}
+            \begin{tabular}{|c|c|c|c|}
+                \hline
+                \multicolumn{2}{|c|}{Task} & \makecell{Tianyi\\Zhang} & \makecell{Haoran\\Dang} \\
+                \hline
+                \multirow{4}{*}{\makecell{Task \ref{Alarm Clock} \\ Alarm Clock}} 
+                    & Concept & \checkmark & \checkmark \\
+                    \cline{2-4}
+                    & Implementation & \checkmark & \checkmark \\
+                    \cline{2-4}
+                    & Debugging & \checkmark & \checkmark \\
+                    \cline{2-4}
+                    & Design Document & & \checkmark \\
+                \hline
+                \multirow{4}{*}{\makecell{Task \ref{Priority Scheduling} \\ Priority Scheduling}} 
+                    & Concept & \checkmark & \checkmark \\
+                    \cline{2-4}
+                    & Implementation & \checkmark & \checkmark \\
+                    \cline{2-4}
+                    & Debugging & \checkmark & \\
+                    \cline{2-4}
+                    & Design Document & \checkmark & \\
+                \hline
+                \multirow{4}{*}{\makecell{Task \ref{Advanced Scheduler} \\ Advanced Scheduler}} 
+                    & Concept & \checkmark & \checkmark \\
+                    \cline{2-4}
+                    & Implementation & \checkmark & \checkmark \\
+                    \cline{2-4}
+                    & Debugging & \checkmark & \checkmark \\
+                    \cline{2-4}
+                    & Design Document & & \checkmark \\
+                \hline
+            \end{tabular}
+        \end{center}
 
 \end{document}
 \endinput
