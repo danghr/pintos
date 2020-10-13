@@ -1,0 +1,179 @@
+% VLDB template version of 2020-03-05 enhances the ACM template, version 1.7.0:
+% https://www.acm.org/publications/proceedings-template
+% The ACM Latex guide provides further information about the ACM template
+
+\documentclass[sigconf, nonacm, balance=false, urlbreakonhyphens=true]{acmart}
+\usepackage{amsmath, amsfonts, amsthm}
+\usepackage{url}
+\usepackage{makecell}
+\usepackage{multirow}
+\usepackage{longtable}
+\usepackage{verbatim}
+\usepackage{makecell}
+
+% Allow URL Breakline
+\def\UrlBreaks{\do\A\do\B\do\C\do\D\do\E\do\F\do\G\do\H\do\I\do\J
+\do\K\do\L\do\M\do\N\do\O\do\P\do\Q\do\R\do\S\do\T\do\U\do\V
+\do\W\do\X\do\Y\do\Z\do\[\do\\\do\]\do\^\do\_\do\`\do\a\do\b
+\do\c\do\d\do\e\do\f\do\g\do\h\do\i\do\j\do\k\do\l\do\m\do\n
+\do\o\do\p\do\q\do\r\do\s\do\t\do\u\do\v\do\w\do\x\do\y\do\z
+\do\.\do\@\do\\\do\/\do\!\do\_\do\|\do\;\do\>\do\]\do\)\do\,
+\do\?\do\'\do+\do\=\do\#}
+
+\begin{document}
+    \title{CS 130 Project 2: User Programs\\Design Document}
+
+    %%
+    %% The "author" command and its associated commands are used to define the authors and their affiliations.
+    \author{Tianyi Zhang}
+    \affiliation{%
+        \institution{School of Information Science and Technology}
+        \state{2018533074}
+    }
+    \email{zhangty2@shanghaitech.edu.cn}
+
+    \author{Haoran Dang}
+    \affiliation{%
+        \institution{School of Information Science and Technology}
+        \state{2018533259}
+    }
+    \email{danghr@shanghaitech.edu.cn}
+
+    \maketitle
+
+    \setcounter{section}{-1}
+
+    \section{Preliminaries}
+        %%
+        %% If you have any preliminary comments on your submission, notes for the
+        %% TAs, or extra credit, please give them here.
+        \subsection{Preliminary Comments}
+
+        No preliminary comment for this project. 
+
+        %%
+        %% Please cite any offline or online sources you consulted while
+        %% preparing your submission, other than the Pintos documentation, course
+        %% text, lecture notes, and course staff.
+        \subsection{References}
+        
+            \begin{itemize}
+                \item
+            \end{itemize} 
+    
+    \section{Argument Passing}
+            
+        \label{Argument Passing}
+    
+        \subsection{Data Structures}
+        
+            \subsubsection{Copy here the declaration of each new or changed `\texttt{struct}' or `\texttt{struct}' member, global or static variable, `\texttt{typedef}', or enumeration. Identify the purpose of each in 25 words or less. } 
+            
+                \begin{itemize}
+                    \item In file \texttt{}
+\begin{verbatim}
+\end{verbatim}
+                \end{itemize}
+        
+        \subsection{Algorithms}
+        
+            \subsubsection{Briefly describe how you implemented argument parsing.  How do you arrange for the elements of \texttt{argv[]} to be in the right order?  How do you avoid overflowing the stack page? }
+        
+        \subsection{Rationale}
+            
+            \subsubsection{Why does Pintos implement \texttt{strtok\_r()} but not \texttt{strtok()}?} 
+
+            \subsubsection{In Pintos, the kernel separates commands into a executable name and arguments.  In Unix-like systems, the shell does this separation.  Identify at least two advantages of the Unix approach.} 
+    
+    \section{System Calls}
+
+        \label{System Calls}
+
+        \subsection{Data Structures}
+            
+            \subsubsection{Copy here the declaration of each new or changed `\texttt{struct}' or `\texttt{struct}' member, global or static variable, `\texttt{typedef}', or enumeration. Identify the purpose of each in 25 words or less. } 
+
+                \begin{itemize}
+                    \item In file \texttt{}
+\begin{verbatim}
+\end{verbatim}
+                \end{itemize}
+
+            \subsubsection{Describe how file descriptors are associated with open files.  Are file descriptors unique within the entire OS or just within a single process? }
+
+        \subsection{Algorithms}
+
+            \subsubsection{Describe your code for reading and writing user data from the kernel. } 
+
+            \subsubsection{Suppose a system call causes a full page (4,096 bytes) of data to be copied from user space into the kernel.  What is the least and the greatest possible number of inspections of the page table (e.g. calls to \texttt{pagedir\_get\_page()}) that might result?  What about for a system call that only copies 2 bytes of data?  Is there room for improvement in these numbers, and how much? }
+
+            \subsubsection{Briefly describe your implementation of the "\texttt{wait}" system call and how it interacts with process termination. }
+
+            \subsubsection{Any access to user program memory at a user-specified address can fail due to a bad pointer value.  Such accesses must cause the process to be terminated.  System calls are fraught with such accesses, e.g. a "\texttt{write}" system call requires reading the system call number from the user stack, then each of the call's three arguments, then an arbitrary amount of user memory, and any of these can fail at any point.  This poses a design and error-handling problem: how do you best avoid obscuring the primary function of code in a morass of error-handling?  Furthermore, when an error is detected, how do you ensure that all temporarily allocated resources (locks, buffers, etc.) are freed?  In a few paragraphs, describe the strategy or strategies you adopted for managing these issues.  Give an example. }
+
+        \subsection{Synchronization}
+
+            \subsubsection{The "\texttt{exec}" system call returns \texttt{-1} if loading the new executable fails, so it cannot return before the new executable has completed loading.  How does your code ensure this?  How is the load success/failure status passed back to the thread that calls "\texttt{exec}"? }
+
+            \subsubsection{Consider parent process P with child process C.  How do you ensure proper synchronization and avoid race conditions when P calls \texttt{wait(C)} before C exits?  After C exits?  How do you ensure that all resources are freed in each case?  How about when P terminates without waiting, before C exits?  After C exits?  Are there any special cases? }
+
+        \subsection{Rationale}
+
+            \subsubsection{Why did you choose to implement access to user memory from the kernel in the way that you did? }
+
+            \subsubsection{What advantages or disadvantages can you see to your design for file descriptors? }
+
+            \subsubsection{The default \texttt{tid\_t} to \texttt{pid\_t} mapping is the identity mapping.  If you changed it, what advantages are there to your approach? }
+    
+    \section{Survey Questions}
+
+        % Answering these questions is optional, but it will help us improve the
+        % course in future quarters.  Feel free to tell us anything you
+        % want--these questions are just to spur your thoughts.  You may also
+        % choose to respond anonymously in the course evaluations at the end of
+        % the quarter.
+
+        \subsubsection*{In your opinion, was this assignment, or any one of the two problems in it, too easy or too hard? Did it take too long or too little time? }
+
+        \subsubsection*{Did you find that working on a particular part of the assignment gave you greater insight into some aspect of OS design? }
+
+        \subsubsection*{Is there some particular fact or hint we should give students in future quarters to help them solve the problems? Conversely, did you find any of our guidance to be misleading? }
+
+        \subsubsection*{Do you have any suggestions for the TAs to more effectively assist students, either for future quarters or the remaining projects? }
+
+            Not yet. 
+
+        \subsubsection*{Any other comments? }
+
+            Not yet. 
+    
+    \section*{Contributors}
+
+        \begin{center}
+            \begin{tabular}{|c|c|c|c|}
+                \hline
+                \multicolumn{2}{|c|}{Task} & \makecell{Tianyi\\Zhang} & \makecell{Haoran\\Dang} \\
+                \hline
+                \multirow{4}{*}{\makecell{Task \ref{Argument Passing} \\ Argument Passing}} 
+                    & Concept &  &  \\
+                    \cline{2-4}
+                    & Implementation &  &  \\
+                    \cline{2-4}
+                    & Debugging &  &  \\
+                    \cline{2-4}
+                    & Design Document & &  \\
+                \hline
+                \multirow{4}{*}{\makecell{Task \ref{System Calls} \\ System Calls}} 
+                    & Concept &  &  \\
+                    \cline{2-4}
+                    & Implementation &  &  \\
+                    \cline{2-4}
+                    & Debugging &  & \\
+                    \cline{2-4}
+                    & Design Document &  & \\
+                \hline
+            \end{tabular}
+        \end{center}
+
+\end{document}
+\endinput
