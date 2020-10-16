@@ -784,6 +784,11 @@ init_thread (struct thread *t, const char *name, int priority)
   if (thread_mlfqs)
     thread_update_priority_by_nice (t, NULL);
 
+#ifdef USERPROG
+  /* Regard as 0 if no exit status is changed */
+  t->exit_status = 0;
+#endif
+
   old_level = intr_disable ();
   /* Push the initiated thread into all_list in priority order. */
   list_insert_ordered (&all_list, &t->allelem, 
