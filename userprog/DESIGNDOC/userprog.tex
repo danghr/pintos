@@ -94,9 +94,18 @@
             \subsubsection{Copy here the declaration of each new or changed `\texttt{struct}' or `\texttt{struct}' member, global or static variable, `\texttt{typedef}', or enumeration. Identify the purpose of each in 25 words or less. } 
 
                 \begin{itemize}
-                    \item In file \texttt{}
+                    \item In file \texttt{threads/threads.h}
 \begin{verbatim}
-\end{verbatim}
+struct thread
+{
+    ...
+#ifdef USERPROG
+    ...
+    /* Exit status of the thread */
+    int exit_status;
+#endif
+    ...
+}\end{verbatim}
                 \end{itemize}
 
             \subsubsection{Describe how file descriptors are associated with open files.  Are file descriptors unique within the entire OS or just within a single process? }
