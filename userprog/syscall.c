@@ -56,7 +56,8 @@ syscall_halt (void)
 static void
 syscall_exit (int status)
 {
-
+   thread_current ()->exit_status = status;
+   thread_exit ();
 }
 
 /* Runs the executable whose name is given in CMD_LINE, passing 
