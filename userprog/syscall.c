@@ -6,24 +6,46 @@
 
 static void syscall_handler (struct intr_frame *);
 
-/* Interrupt handler functions */
-static int *syscall_handlers[20];
+/* Interrupt handler wrapper functions */
+static int (*syscall_handler_wrapper[20]) (struct intr_frame *);
 
 void
 syscall_init (void) 
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
+  syscall_handler_wrapper[SYS_HALT] = &syscall_halt_wrapper;
+  syscall_handler_wrapper[SYS_EXIT] = &syscall_exit_wrapper;
+  syscall_handler_wrapper[SYS_EXEC] = &syscall_exec_wrapper;
+  syscall_handler_wrapper[SYS_WAIT] = &syscall_wait_wrapper;
+  syscall_handler_wrapper[SYS_CREATE] = &syscall_create_wrapper;
+  syscall_handler_wrapper[SYS_REMOVE] = &syscall_remove_wrapper;
+  syscall_handler_wrapper[SYS_OPEN] = &syscall_open_wrapper;
+  syscall_handler_wrapper[SYS_FILESIZE] = &syscall_filesize_wrapper;
+  syscall_handler_wrapper[SYS_READ] = &syscall_read_wrapper;
+  syscall_handler_wrapper[SYS_WRITE] = &syscall_write_wrapper;
+  syscall_handler_wrapper[SYS_SEEK] = &syscall_seek_wrapper;
+  syscall_handler_wrapper[SYS_TELL] = &syscall_tell_wrapper;
+  syscall_handler_wrapper[SYS_CLOSE] = &syscall_close_wrapper;
+  syscall_handler_wrapper[SYS_MMAP] = &syscall_mmap_wrapper;
+  syscall_handler_wrapper[SYS_MUNMAP] = &syscall_munmap_wrapper;
+  syscall_handler_wrapper[SYS_CHDIR] = &syscall_chdir_wrapper;
+  syscall_handler_wrapper[SYS_MKDIR] = &syscall_mkdir_wrapper;
+  syscall_handler_wrapper[SYS_READDIR] = &syscall_readdir_wrapper;
+  syscall_handler_wrapper[SYS_ISDIR] = &syscall_isdir_wrapper;
+  syscall_handler_wrapper[SYS_INUMBER] = &syscall_inumber_wrapper;
 }
 
-/* System call handler
-   Retrieve the system call number, then any system call 
-   arguments, and carry out appropriate actions. */
+/* System call handler.
+   Retrieve the system call number and send it to correct
+   wrappers. */
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
   printf ("system call!\n");
   thread_exit ();
 }
+
+/* System calls. */
 
 /* *** IMPORTANT ***
 
@@ -160,4 +182,134 @@ static void
 syscall_close (int fd)
 {
 
+}
+
+/* System call wrappers .
+   Pick correct argument from the stack and send it to handlers. 
+   Returns 0 if operation is correct, -1 if the operation fails 
+   or illegal. */
+
+/* Projects 2 and later. */
+
+static int
+syscall_halt_wrapper (struct intr_frame *f UNUSED)
+{
+  syscall_halt ();
+  return 0;
+}
+
+static int
+syscall_exit_wrapper (struct intr_frame *f UNUSED)
+{
+  return -1;
+}
+
+static int
+syscall_exec_wrapper (struct intr_frame *f UNUSED)
+{
+  return -1;
+}
+
+static int
+syscall_wait_wrapper (struct intr_frame *f UNUSED)
+{
+  return -1;
+}
+
+static int
+syscall_create_wrapper (struct intr_frame *f UNUSED)
+{
+  return -1;
+}
+
+static int
+syscall_remove_wrapper (struct intr_frame *f UNUSED)
+{
+  return -1;
+}
+
+static int
+syscall_open_wrapper (struct intr_frame *f UNUSED)
+{
+  return -1;
+}
+
+static int
+syscall_filesize_wrapper (struct intr_frame *f UNUSED)
+{
+  return -1;
+}
+
+static int
+syscall_read_wrapper (struct intr_frame *f UNUSED)
+{
+  return -1;
+}
+
+static int
+syscall_write_wrapper (struct intr_frame *f UNUSED)
+{
+  return -1;
+}
+static int
+syscall_seek_wrapper (struct intr_frame *f UNUSED)
+{
+  return -1;
+}
+
+static int
+syscall_tell_wrapper (struct intr_frame *f UNUSED)
+{
+  return -1;
+}
+static int
+syscall_close_wrapper (struct intr_frame *f UNUSED)
+{
+  return -1;
+}
+
+/* Project 3 and optionally project 4. */
+
+static int
+syscall_mmap_wrapper (struct intr_frame *f UNUSED)
+{
+  return -1;
+}
+
+static int
+syscall_munmap_wrapper (struct intr_frame *f UNUSED)
+{
+  return -1;
+}
+
+/* Project 4 only. */
+
+static int
+syscall_chdir_wrapper (struct intr_frame *f UNUSED)
+{
+  return -1;
+}
+
+static int
+syscall_mkdir_wrapper (struct intr_frame *f UNUSED)
+{
+  return -1;
+}
+
+static int
+syscall_readdir_wrapper (struct intr_frame *f UNUSED)
+{
+  return -1;
+}
+
+static int
+syscall_isdir_wrapper (struct intr_frame *f UNUSED)
+{
+  return -1;
+}
+
+static int
+syscall_inumber_wrapper (struct intr_frame *f UNUSED)
+{
+  return -1;
 }
