@@ -185,7 +185,8 @@ syscall_close (int fd)
 }
 
 /* System call wrappers .
-   Pick correct argument from the stack and send it to handlers. 
+   Retrive correct argument from the stack and send it to call 
+   functions. 
    Returns 0 if operation is correct, -1 if the operation fails 
    or illegal. */
 
