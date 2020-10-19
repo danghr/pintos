@@ -25,15 +25,15 @@ static unsigned syscall_tell (int);
 static void syscall_close (int);
 
 /* Project 3 and optionally project 4. */
-static mapid_t syscall_mmap (int, void *);
-static void syscall_munmap (mapid_t);
+static mapid_t syscall_mmap (int, void *) UNUSED;
+static void syscall_munmap (mapid_t) UNUSED;
 
 /* Project 4 only. */
-static bool syscall_chdir (const char *);
-static bool syscall_mkdir (const char *);
-static bool syscall_readdir (int, char[READDIR_MAX_LEN + 1]);
-static bool syscall_isdir (int);
-static int syscall_inumber (int);
+static bool syscall_chdir (const char *) UNUSED;
+static bool syscall_mkdir (const char *) UNUSED;
+static bool syscall_readdir (int, char[READDIR_MAX_LEN + 1]) UNUSED;
+static bool syscall_isdir (int) UNUSED;
+static int syscall_inumber (int) UNUSED;
 
 /* System call wrappers. */
 /* Projects 2 and later. */
@@ -52,15 +52,15 @@ static int syscall_tell_wrapper (struct intr_frame *);
 static int syscall_close_wrapper (struct intr_frame *);
 
 /* Project 3 and optionally project 4. */
-static int syscall_mmap_wrapper (struct intr_frame *);
-static int syscall_munmap_wrapper (struct intr_frame *);
+static int syscall_mmap_wrapper (struct intr_frame *) UNUSED;
+static int syscall_munmap_wrapper (struct intr_frame *) UNUSED;
 
 /* Project 4 only. */
-static int syscall_chdir_wrapper (struct intr_frame *);
-static int syscall_mkdir_wrapper (struct intr_frame *);
-static int syscall_readdir_wrapper (struct intr_frame *);
-static int syscall_isdir_wrapper (struct intr_frame *);
-static int syscall_inumber_wrapper (struct intr_frame *);
+static int syscall_chdir_wrapper (struct intr_frame *) UNUSED;
+static int syscall_mkdir_wrapper (struct intr_frame *) UNUSED;
+static int syscall_readdir_wrapper (struct intr_frame *) UNUSED;
+static int syscall_isdir_wrapper (struct intr_frame *) UNUSED;
+static int syscall_inumber_wrapper (struct intr_frame *) UNUSED;
 
 void
 syscall_init (void) 
