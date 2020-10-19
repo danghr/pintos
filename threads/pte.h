@@ -69,7 +69,7 @@ static inline uintptr_t pd_no (const void *va) {
 
 /* Returns a PDE that points to page table PT. */
 static inline uint32_t pde_create (uint32_t *pt) {
-  ASSERT (pg_ofs (pt) == 0);
+  ASSERT (pg_ofs (pt) == 0);                  /* Use this Assert to make sure the pt is the begin of the PT. */
   return vtop (pt) | PTE_U | PTE_P | PTE_W;
 }
 

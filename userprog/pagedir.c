@@ -31,7 +31,7 @@ pagedir_destroy (uint32_t *pd)
 
   if (pd == NULL)
     return;
-
+  /* Use Assert to make sure not destroy the init_page_dir. --ZTY */
   ASSERT (pd != init_page_dir);
   for (pde = pd; pde < pd + pd_no (PHYS_BASE); pde++)
     if (*pde & PTE_P) 
