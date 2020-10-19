@@ -154,9 +154,9 @@ syscall_handler (struct intr_frame *f UNUSED)
    calls.  If the user program requires a wrong memory address,
    terminate the process and free its resources.
 
-   Might be checked by using pagedir_get_page() in
-   "userprog/pagedir.c", which returns NULL if the address is
-   unmapped. 
+   If 
+     pagedir_get_page (get_pagedir (), PTR) == NULL
+   then it means that PTR is not valid. 
 
    Also, all the arguments passed to system calls should be 
    checked, and with an illegal argument, we can returning an 
