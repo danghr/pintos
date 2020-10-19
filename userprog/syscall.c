@@ -25,15 +25,15 @@ static unsigned syscall_tell (int);
 static void syscall_close (int);
 
 /* Project 3 and optionally project 4. */
-static mapid_t syscall_mmap (int, void *) UNUSED;
-static void syscall_munmap (mapid_t) UNUSED;
+static mapid_t syscall_mmap (int, void *);
+static void syscall_munmap (mapid_t);
 
 /* Project 4 only. */
-static bool syscall_chdir (const char *) UNUSED;
-static bool syscall_mkdir (const char *) UNUSED;
-static bool syscall_readdir (int, char[READDIR_MAX_LEN + 1]) UNUSED;
-static bool syscall_isdir (int) UNUSED;
-static int syscall_inumber (int) UNUSED;
+static bool syscall_chdir (const char *);
+static bool syscall_mkdir (const char *);
+static bool syscall_readdir (int, char[READDIR_MAX_LEN + 1]);
+static bool syscall_isdir (int);
+static int syscall_inumber (int);
 
 /* System call wrappers. */
 /* Projects 2 and later. */
@@ -52,15 +52,15 @@ static int syscall_tell_wrapper (struct intr_frame *);
 static int syscall_close_wrapper (struct intr_frame *);
 
 /* Project 3 and optionally project 4. */
-static int syscall_mmap_wrapper (struct intr_frame *) UNUSED;
-static int syscall_munmap_wrapper (struct intr_frame *) UNUSED;
+static int syscall_mmap_wrapper (struct intr_frame *);
+static int syscall_munmap_wrapper (struct intr_frame *);
 
 /* Project 4 only. */
-static int syscall_chdir_wrapper (struct intr_frame *) UNUSED;
-static int syscall_mkdir_wrapper (struct intr_frame *) UNUSED;
-static int syscall_readdir_wrapper (struct intr_frame *) UNUSED;
-static int syscall_isdir_wrapper (struct intr_frame *) UNUSED;
-static int syscall_inumber_wrapper (struct intr_frame *) UNUSED;
+static int syscall_chdir_wrapper (struct intr_frame *);
+static int syscall_mkdir_wrapper (struct intr_frame *);
+static int syscall_readdir_wrapper (struct intr_frame *);
+static int syscall_isdir_wrapper (struct intr_frame *);
+static int syscall_inumber_wrapper (struct intr_frame *);
 
 void
 syscall_init (void) 
@@ -114,7 +114,7 @@ terminate_program (int exit_status)
    Retrieve the system call number and send it to correct
    wrappers. */
 static void
-syscall_handler (struct intr_frame *f UNUSED) 
+syscall_handler (struct intr_frame *f) 
 {
   /* System call number is saved in stack pointer (f->esp).
      See section 3.5.2 in the doc for details. */
@@ -185,7 +185,7 @@ syscall_exit (int status)
    any given arguments, and returns the new process's program id 
    (pid). */
 static pid_t
-syscall_exec (const char *cmd_line)
+syscall_exec (const char *cmd_line UNUSED)
 {
 
 }
@@ -193,7 +193,7 @@ syscall_exec (const char *cmd_line)
 /* Waits for a child process PID and retrieves the child's exit
    status. */
 static int
-syscall_wait (pid_t pid)
+syscall_wait (pid_t pid UNUSED)
 {
 
 }
@@ -208,7 +208,7 @@ syscall_wait (pid_t pid)
    in size. 
    Returns true if successful, false otherwise. */
 static bool
-syscall_create (const char *file, unsigned initial_size)
+syscall_create (const char *file UNUSED, unsigned initial_size UNUSED)
 {
 
 }
@@ -216,7 +216,7 @@ syscall_create (const char *file, unsigned initial_size)
 /* Deletes the file called FILE. 
    Returns true if successful, false otherwise. */
 static bool
-syscall_remove (const char *file)
+syscall_remove (const char *file UNUSED)
 {
 
 }
@@ -225,14 +225,14 @@ syscall_remove (const char *file)
    Returns a nonnegative integer handle called a "file descriptor"
    (fd), or -1 if the file could not be opened. */
 static int
-syscall_open (const char *file)
+syscall_open (const char *file UNUSED)
 {
 
 }
 
 /* Returns the size, in bytes, of the file open as FD. */
 static int
-syscall_filesize (int fd)
+syscall_filesize (int fd UNUSED)
 {
 
 }
@@ -242,7 +242,8 @@ syscall_filesize (int fd)
    -1 if the file could not be read (due to a condition other than 
    end of file). */
 static int
-syscall_read (int fd, void *buffer, unsigned length)
+syscall_read (int fd UNUSED, void *buffer UNUSED, 
+  unsigned length UNUSED)
 {
 
 }
@@ -251,7 +252,8 @@ syscall_read (int fd, void *buffer, unsigned length)
    Returns the number of bytes actually written, which may be less 
    than size if some bytes could not be written. */
 static int
-syscall_write (int fd, const void *buffer, unsigned length)
+syscall_write (int fd UNUSED, const void *buffer UNUSED, 
+  unsigned length UNUSED)
 {
 
 }
@@ -260,7 +262,7 @@ syscall_write (int fd, const void *buffer, unsigned length)
    POSITION, expressed in bytes from the beginning of the file. 
    (Thus, a position of 0 is the file's start.) */
 static void
-syscall_seek (int fd, unsigned position)
+syscall_seek (int fd UNUSED, unsigned position UNUSED)
 {
 
 }
@@ -269,7 +271,7 @@ syscall_seek (int fd, unsigned position)
    open file FD, expressed in bytes from the beginning of the 
    file. */
 static unsigned
-syscall_tell (int fd)
+syscall_tell (int fd UNUSED)
 {
 
 }
@@ -278,7 +280,7 @@ syscall_tell (int fd)
    implicitly closes all its open file descriptors, as if by calling 
    this function for each one. */
 static void
-syscall_close (int fd)
+syscall_close (int fd UNUSED)
 {
 
 }
