@@ -95,6 +95,13 @@ find_stack (struct intr_frame *f)
   return f->esp;
 }
 
+/* Return pagedir */
+uint32_t *
+find_pagedir (struct intr_frame *f)
+{
+  return NULL;  /* How? */
+}
+
 /* Kill the program which is violating the system */
 void
 terminate_program (int exit_status)
@@ -116,6 +123,13 @@ syscall_handler (struct intr_frame *f UNUSED)
 
   /* Check wheteher correct syscall num is correct */
   if (syscall_num < 0 || syscall_num >= 20)
+    {
+      terminate_program (-1);
+    }
+  
+  /* Check whether the stack pointer is a valid user address */
+  if (pagedir_get_page (find_pagedir (f), find_stack (f)) 
+    == NULL)
     {
       terminate_program (-1);
     }
