@@ -25,11 +25,14 @@ static bool load(const char *cmdline, void (**eip)(void), void **esp);
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
-tid_t process_execute(const char *file_name)
+tid_t 
+process_execute(const char *file_name)
 {
   char *fn_copy;
   tid_t tid;
-
+  /* The first words in file name. */
+  char *execute_name;
+  find_exec_name (file_name, execute_name);
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page(0);
@@ -38,12 +41,31 @@ tid_t process_execute(const char *file_name)
   strlcpy(fn_copy, file_name, PGSIZE);
 
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create(file_name, PRI_DEFAULT, start_process, fn_copy);
+  tid = thread_create(execute_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page(fn_copy);
   return tid;
 }
-
+void 
+find_exec_name (const char *file_name, char *execute_name)
+{
+  int i = 0;
+  /* Find the execute_name which is input into the thread_create. */
+  for(;;)
+  {
+    if(file_name[i] == ' ')
+    {
+      memcpy(execute_name, file_name, (size_t) i + 1);
+      break;
+    }
+    if(file_name[i] == '\0')
+    {
+      memcpy(execute_name, file_name, (size_t) i + 1);
+      break;
+    }
+    i++;
+  }
+}
 /* A thread function that loads a user process and starts it
    running. */
 static void
@@ -52,13 +74,14 @@ start_process(void *file_name_)
   char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
-
+  char *execute_name;
+  find_exec_name (file_name, execute_name);
   /* Initialize interrupt frame and load executable. */
   memset(&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load(file_name, &if_.eip, &if_.esp);
+  success = load(execute_name, &if_.eip, &if_.esp);
 
   /* If load failed, quit. */
   palloc_free_page(file_name);
