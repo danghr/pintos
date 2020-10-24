@@ -12,6 +12,7 @@
 #include "filesys/file.h"
 #include "devices/shutdown.h"
 #include "devices/intq.h"
+#include "devices/input.h"
 
 /* Lock of filesys access */
 static struct lock *filesys_lock;
