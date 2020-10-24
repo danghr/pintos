@@ -1,8 +1,10 @@
 #include "userprog/syscall.h"
 #include <stdio.h>
 #include <syscall-nr.h>
+#include "userprog/process.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "threads/vaddr.h"
 
 static void syscall_handler (struct intr_frame *);
 
@@ -88,20 +90,6 @@ syscall_init (void)
   syscall_handler_wrapper[SYS_INUMBER] = &syscall_inumber_wrapper;
 }
 
-/* Return stack pointer */
-void *
-find_stack (struct intr_frame *f)
-{
-  return f->esp;
-}
-
-/* Return pagedir */
-uint32_t *
-get_pagedir ()
-{
-  return thread_current ()->pagedir;
-}
-
 /* Kill the program which is violating the system */
 void
 terminate_program (int exit_status)
@@ -110,26 +98,33 @@ terminate_program (int exit_status)
   thread_exit ();
 }
 
+/* Verify that a memory address is valid in user program */
+static bool
+is_valid_addr (const void *uaddr)
+{
+  if (!is_user_vaddr (uaddr))
+    return false;
+  if (pagedir_get_page (thread_current ()->pagedir, uaddr) 
+    == NULL)
+    return false;
+  return true;
+}
+
 /* System call handler.
    Retrieve the system call number and send it to correct
    wrappers. */
 static void
 syscall_handler (struct intr_frame *f) 
 {
+  if (!is_valid_addr (f->esp))
+    terminate_program (-1);
   /* System call number is saved in stack pointer (f->esp).
      See section 3.5.2 in the doc for details. */
-  int syscall_num = * (int*) find_stack (f);
+  int syscall_num = *(int*)(f->esp);
   int wrapper_return;
 
   /* Check wheteher correct syscall num is correct */
   if (syscall_num < 0 || syscall_num >= 20)
-    {
-      terminate_program (-1);
-    }
-  
-  /* Check whether the stack pointer is a valid user address */
-  if (pagedir_get_page (get_pagedir (), find_stack (f)) 
-    == NULL)
     {
       terminate_program (-1);
     }
@@ -178,16 +173,16 @@ syscall_halt (void)
 static void
 syscall_exit (int status)
 {
-   terminate_program (status);
+  terminate_program (status);
 }
 
 /* Runs the executable whose name is given in CMD_LINE, passing 
    any given arguments, and returns the new process's program id 
    (pid). */
 static pid_t
-syscall_exec (const char *cmd_line UNUSED)
+syscall_exec (const char *cmd_line)
 {
-
+  process_execute (cmd_line);
 }
 
 /* Waits for a child process PID and retrieves the child's exit
@@ -304,73 +299,191 @@ syscall_halt_wrapper (struct intr_frame *f UNUSED)
 }
 
 static int
-syscall_exit_wrapper (struct intr_frame *f UNUSED)
+syscall_exit_wrapper (struct intr_frame *f)
 {
-  return -1;
+  /* Validate memory address */
+  if (!is_valid_addr ((void*)((int*)(f->esp + 1))))
+    return -1;
+  
+  /* Decode parameters */
+  int status = *((int*)(f->esp + 1));
+
+  /* Write the return value */
+  syscall_exit (status);
+  return 0;
 }
 
 static int
-syscall_exec_wrapper (struct intr_frame *f UNUSED)
+syscall_exec_wrapper (struct intr_frame *f)
 {
-  return -1;
+  /* Validate memory address */
+  if (!is_valid_addr ((void*)((int*)(f->esp + 1))))
+    return -1;
+  
+  /* Decode parameters */
+  char *cmd_line = (char*)((int*)(f->esp + 1));
+
+  /* Write the return value */
+  f->eax = syscall_exec (cmd_line);
+  return 0;
 }
 
 static int
-syscall_wait_wrapper (struct intr_frame *f UNUSED)
+syscall_wait_wrapper (struct intr_frame *f)
 {
-  return -1;
+  /* Validate memory address */
+  if (!is_valid_addr ((void*)((int*)(f->esp + 1))))
+    return -1;
+  
+  /* Decode parameters */
+  pid_t pid = *(pid_t*)((int*)(f->esp + 1));
+
+  /* Write the return value */
+  f->eax = syscall_wait (pid);
+  return 0;
 }
 
 static int
-syscall_create_wrapper (struct intr_frame *f UNUSED)
+syscall_create_wrapper (struct intr_frame *f)
 {
-  return -1;
+  /* Validate memory address */
+  for (int i = 1; i <= 2; i++)
+    if (!is_valid_addr ((void*)((int*)(f->esp + i))))
+        return -1;
+  
+  /* Decode parameters */
+  char *file = (char*)((int*)(f->esp + 1));
+  unsigned initial_size = *((unsigned*)(f->esp + 2));
+
+  /* Write the return value */
+  f->eax = syscall_create (file, initial_size);
+  return 0;
 }
 
 static int
 syscall_remove_wrapper (struct intr_frame *f UNUSED)
 {
-  return -1;
+  /* Validate memory address */
+  if (!is_valid_addr ((void*)((int*)(f->esp + 1))))
+    return -1;
+  
+  /* Decode parameters */
+  char *file = (char*)((int*)(f->esp + 1));
+
+  /* Write the return value */
+  f->eax = syscall_remove (file);
+  return 0;
 }
 
 static int
 syscall_open_wrapper (struct intr_frame *f UNUSED)
 {
-  return -1;
+  /* Validate memory address */
+  if (!is_valid_addr ((void*)((int*)(f->esp + 1))))
+    return -1;
+  
+  /* Decode parameters */
+  char *file = (char*)((int*)(f->esp + 1));
+
+  /* Write the return value */
+  f->eax = syscall_open (file);
+  return 0;
 }
 
 static int
 syscall_filesize_wrapper (struct intr_frame *f UNUSED)
 {
-  return -1;
+  /* Validate memory address */
+  if (!is_valid_addr ((void*)((int*)(f->esp + 1))))
+    return -1;
+  
+  /* Decode parameters */
+  int fd = *((int*)(f->esp + 1));
+
+  /* Write the return value */
+  f->eax = syscall_filesize (fd);
+  return 0;
 }
 
 static int
 syscall_read_wrapper (struct intr_frame *f UNUSED)
 {
-  return -1;
+  /* Validate memory address */
+  for (int i = 1; i <= 3; i++)
+    if (!is_valid_addr ((void*)((int*)(f->esp + i))))
+      return -1;
+  
+  /* Decode parameters */
+  int fd = *((int*)(f->esp + 1));
+  void *buffer = (void*)((int*)(f->esp + 2));
+  unsigned length = *((unsigned*)(f->esp + 3));
+
+  /* Write the return value */
+  f->eax = syscall_read (fd, buffer, length);
+  return 0;
 }
 
 static int
-syscall_write_wrapper (struct intr_frame *f UNUSED)
+syscall_write_wrapper (struct intr_frame *f)
 {
-  return -1;
+  /* Validate memory address */
+  for (int i = 1; i <= 3; i++)
+    if (!is_valid_addr ((void*)((int*)(f->esp + i))))
+      return -1;
+  
+  /* Decode parameters */
+  int fd = *((int*)(f->esp + 1));
+  void *buffer = (void*)((int*)(f->esp + 2));
+  unsigned length = *((unsigned*)(f->esp + 3));
+
+  /* Write the return value */
+  f->eax = syscall_write (fd, buffer, length);
+  return 0;
 }
 static int
 syscall_seek_wrapper (struct intr_frame *f UNUSED)
 {
-  return -1;
+  /* Validate memory address */
+  for (int i = 1; i <= 2; i++)
+    if (!is_valid_addr ((void*)((int*)(f->esp + i))))
+      return -1;
+  
+  /* Decode parameters */
+  int fd = *((int*)(f->esp + 1));
+  unsigned position = *((unsigned*)(f->esp + 2));
+
+  /* Write the return value */
+  syscall_seek (fd, position);
+  return 0;
 }
 
 static int
 syscall_tell_wrapper (struct intr_frame *f UNUSED)
 {
-  return -1;
+  /* Validate memory address */
+  if (!is_valid_addr ((void*)((int*)(f->esp + 1))))
+    return -1;
+  
+  /* Decode parameters */
+  int fd = *((int*)(f->esp + 1));
+
+  /* Write the return value */
+  f->eax = syscall_tell (fd);
+  return 0;
 }
 static int
 syscall_close_wrapper (struct intr_frame *f UNUSED)
 {
-  return -1;
+  /* Validate memory address */
+  if (!is_valid_addr ((void*)((int*)(f->esp + 1))))
+    return -1;
+  
+  /* Decode parameters */
+  int fd = *((int*)(f->esp + 1));
+
+  /* Write the return value */
+  syscall_close (fd);
+  return 0;
 }
 
 /* Project 3 and optionally project 4. */
