@@ -11,6 +11,7 @@
 #include "filesys/filesys.h"
 #include "filesys/file.h"
 #include "devices/shutdown.h"
+#include "devices/intq.h"
 
 /* Lock of filesys access */
 static struct lock *filesys_lock;
@@ -316,6 +317,19 @@ syscall_filesize (int fd)
 int
 syscall_read (int fd, void *buffer, unsigned length)
 {
+  if (fd == STDIN_FILENO)
+    {
+      /* May need a lot of modification */
+      uint8_t input_char;
+      int cnt = 0;
+      for (unsigned i = 0; i < length; i++)
+        {
+          input_char = input_getc ();
+          intq_putc (buffer, input_char);
+          cnt++;
+        }
+      return cnt;
+    }
   struct fd_entry *fd_e = get_fd_entry (fd);
   int ret;
   if (fd_e == NULL)
@@ -332,6 +346,11 @@ syscall_read (int fd, void *buffer, unsigned length)
 int
 syscall_write (int fd, const void *buffer, unsigned length)
 {
+  if (fd == STDOUT_FILENO)
+    {
+      putbuf ((char *)buffer, (size_t)length);
+      return (int)length;
+    }
   struct fd_entry *fd_e = get_fd_entry (fd);
   int ret;
   if (fd_e == NULL)
