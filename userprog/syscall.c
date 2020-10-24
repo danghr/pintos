@@ -361,7 +361,7 @@ syscall_create_wrapper (struct intr_frame *f)
 }
 
 static int
-syscall_remove_wrapper (struct intr_frame *f UNUSED)
+syscall_remove_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
   if (!is_valid_addr ((void*)((int*)(f->esp + 1))))
@@ -376,7 +376,7 @@ syscall_remove_wrapper (struct intr_frame *f UNUSED)
 }
 
 static int
-syscall_open_wrapper (struct intr_frame *f UNUSED)
+syscall_open_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
   if (!is_valid_addr ((void*)((int*)(f->esp + 1))))
@@ -391,7 +391,7 @@ syscall_open_wrapper (struct intr_frame *f UNUSED)
 }
 
 static int
-syscall_filesize_wrapper (struct intr_frame *f UNUSED)
+syscall_filesize_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
   if (!is_valid_addr ((void*)((int*)(f->esp + 1))))
@@ -406,7 +406,7 @@ syscall_filesize_wrapper (struct intr_frame *f UNUSED)
 }
 
 static int
-syscall_read_wrapper (struct intr_frame *f UNUSED)
+syscall_read_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
   for (int i = 1; i <= 3; i++)
@@ -441,7 +441,7 @@ syscall_write_wrapper (struct intr_frame *f)
   return 0;
 }
 static int
-syscall_seek_wrapper (struct intr_frame *f UNUSED)
+syscall_seek_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
   for (int i = 1; i <= 2; i++)
@@ -458,7 +458,7 @@ syscall_seek_wrapper (struct intr_frame *f UNUSED)
 }
 
 static int
-syscall_tell_wrapper (struct intr_frame *f UNUSED)
+syscall_tell_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
   if (!is_valid_addr ((void*)((int*)(f->esp + 1))))
@@ -472,7 +472,7 @@ syscall_tell_wrapper (struct intr_frame *f UNUSED)
   return 0;
 }
 static int
-syscall_close_wrapper (struct intr_frame *f UNUSED)
+syscall_close_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
   if (!is_valid_addr ((void*)((int*)(f->esp + 1))))
