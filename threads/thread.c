@@ -787,6 +787,8 @@ init_thread (struct thread *t, const char *name, int priority)
 #ifdef USERPROG
   /* Regard as 0 if no exit status is changed */
   t->exit_status = 0;
+  t->next_fd = 2;
+  list_init (&(t->opened_files));
 #endif
 
   old_level = intr_disable ();
