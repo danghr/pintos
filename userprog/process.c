@@ -32,7 +32,7 @@ process_execute(const char *file_name)
   char *fn_copy;
   tid_t tid;
   /* The first words in file name. */
-  char *execute_name = malloc(15);
+  char *execute_name = malloc(MAX_EXEC_NAME_LENGTH);
   find_exec_name (file_name, execute_name);
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
@@ -48,28 +48,51 @@ process_execute(const char *file_name)
   free(execute_name);
   return tid;
 }
+
+/* Find the execute_name which is input into the thread_create. */
 void 
 find_exec_name (const char *file_name, char *execute_name)
 {
   int i = 0;
-  /* Find the execute_name which is input into the thread_create. */
-  for(;;)
-  {
-    if(file_name[i] == ' ')
+  for (; ; )
     {
-      memcpy(execute_name, file_name, (size_t) i + 1);
-      execute_name[i + 1] = '\0';
-      break;
+      if (file_name[i] == ' ')
+        {
+          memcpy (execute_name, file_name, (size_t) i + 1);
+          execute_name[i] = '\0';
+          break;
+        }
+      if (file_name[i] == '\0')
+        {
+          memcpy (execute_name, file_name, (size_t) i + 1);
+          execute_name[i] = '\0';
+          break;
+        }
+      i++;
     }
-    if(file_name[i] == '\0')
-    {
-      memcpy(execute_name, file_name, (size_t) i + 1);
-      execute_name[i + 1] = '\0';
-      break;
-    }
-    i++;
-  }
 }
+
+/* Find arguments and save them into *argv[] */
+void
+find_args (char *file_name, int *argc, char *argv[])
+{
+  char *save_ptr;
+  char *token;
+
+  /* argv[0] saves the name of the executable */
+  argv[0] = strtok_r (file_name, " ", &save_ptr);
+  *argc = 1;
+
+  /* Find other parameters */
+  token = strtok_r (NULL, " ", &save_ptr);
+  while(token != NULL)
+    {
+      argv[*argc] = token;
+      (*argc)++;
+      token = strtok_r (NULL, " ", &save_ptr);
+    }
+}
+
 /* A thread function that loads a user process and starts it
    running. */
 static void
@@ -85,7 +108,7 @@ start_process(void *file_name_)
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load(execute_name, &if_.eip, &if_.esp);
+  success = load(file_name, &if_.eip, &if_.esp);
 
   /* If load failed, quit. */
   palloc_free_page(file_name);
@@ -223,7 +246,7 @@ struct Elf32_Phdr
 #define PF_W 2 /* Writable. */
 #define PF_R 4 /* Readable. */
 
-static bool setup_stack(void **esp);
+static bool setup_stack(void **esp, char **argv, int argc);
 static bool validate_segment(const struct Elf32_Phdr *, struct file *);
 static bool load_segment(struct file *file, off_t ofs, uint8_t *upage,
                          uint32_t read_bytes, uint32_t zero_bytes,
@@ -241,6 +264,13 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
   off_t file_ofs;
   bool success = false;
   int i;
+  char *argv[MAX_ARGS];
+  int argc;
+  char fn_copy[MAX_CMD_LENGTH];
+
+  /* Copy the file name and find the arguments */
+  strlcpy (fn_copy, file_name, MAX_CMD_LENGTH);
+  find_args (fn_copy, &argc, argv);
 
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create();
@@ -249,7 +279,7 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
   process_activate();
 
   /* Open executable file. */
-  file = filesys_open(file_name);
+  file = filesys_open(argv[0]);
   if (file == NULL)
   {
     printf("load: %s: open failed\n", file_name);
@@ -322,7 +352,7 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
   }
 
   /* Set up stack. */
-  if (!setup_stack(esp))
+  if (!setup_stack(esp, argv, argc))
     goto done;
 
   /* Start address. */
@@ -445,19 +475,62 @@ load_segment(struct file *file, off_t ofs, uint8_t *upage,
 }
 
 /* Create a minimal stack by mapping a zeroed page at the top of
-   user virtual memory. */
+   user virtual memory. 
+   
+   Is to manipulate the stack pointer, so you have **esp, not *esp. 
+   --ZTY */
 static bool
-setup_stack(void **esp)   /* You want to manipulate the stack pointer, so you have **esp, not *esp. --ZTY */
+setup_stack(void **esp, char **argv, int argc)
 {
   uint8_t *kpage;
   bool success = false;
 
-  kpage = palloc_get_page(PAL_USER | PAL_ZERO); /* Try to get a page from user pool and let it be a zeroed page. --ZTY*/
+  /* Try to get a page from user pool and let it be a zeroed 
+     page. --ZTY*/
+  kpage = palloc_get_page(PAL_USER | PAL_ZERO); 
   if (kpage != NULL)
   {
     success = install_page(((uint8_t *)PHYS_BASE) - PGSIZE, kpage, true);
     if (success)
-      *esp = PHYS_BASE - 12; /* Tempory modification, see doc 3.2 */
+      {
+        *esp = PHYS_BASE;
+        /* Address for each parameter words */
+        char* args_place[argc];
+
+        /* Pushing parameter words down in the stack */
+        for (int i = argc - 1; i >= 0; i--)
+          {
+            /* Moving down stack pointer */
+            *esp = *esp - (strlen (argv[i]) + 1) * sizeof (char);
+            /* Copy the parameter words into the place of stack 
+               pointer */
+            memcpy (*esp, argv[i], strlen (argv[i]) + 1);
+            args_place[i] = *esp;
+          }
+        
+        /* Pushing the word-align */
+        *esp -= 4;
+        * (int*) (*esp) = 0;
+        
+        /* Pushing address of each parameter string */
+        *esp -= 4;
+        * (char**) (*esp) = NULL;
+        for (int i = argc - 1; i >= 0; i--)
+          {
+            *esp -= 4;
+            * (char**) (*esp) = args_place[i];
+          }
+        
+        /* Pushing argv and argc */
+        *esp -= 4;
+        * (char***) (*esp) = *esp + 4;
+        *esp -= 4;
+        * (int*) (*esp) = argc;
+        
+        /* Pushing return address */
+        *esp -= 4;
+        * (int*) (*esp) = 0;
+      }
     else
       palloc_free_page(kpage);
   }
