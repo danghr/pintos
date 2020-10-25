@@ -133,6 +133,7 @@ syscall_init (void)
   syscall_handler_wrapper[SYS_READDIR] = &syscall_readdir_wrapper;
   syscall_handler_wrapper[SYS_ISDIR] = &syscall_isdir_wrapper;
   syscall_handler_wrapper[SYS_INUMBER] = &syscall_inumber_wrapper;
+  filesys_lock = malloc (sizeof (struct lock));
   lock_init (filesys_lock);
 }
 
