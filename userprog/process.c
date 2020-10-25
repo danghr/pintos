@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "threads/malloc.h"
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
 #include "userprog/tss.h"
@@ -31,7 +32,7 @@ process_execute(const char *file_name)
   char *fn_copy;
   tid_t tid;
   /* The first words in file name. */
-  char *execute_name;
+  char *execute_name = malloc(15);
   find_exec_name (file_name, execute_name);
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
@@ -56,11 +57,13 @@ find_exec_name (const char *file_name, char *execute_name)
     if(file_name[i] == ' ')
     {
       memcpy(execute_name, file_name, (size_t) i + 1);
+      execute_name[i + 1] = '\0';
       break;
     }
     if(file_name[i] == '\0')
     {
       memcpy(execute_name, file_name, (size_t) i + 1);
+      execute_name[i + 1] = '\0';
       break;
     }
     i++;
@@ -74,7 +77,7 @@ start_process(void *file_name_)
   char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
-  char *execute_name;
+  char *execute_name = malloc(15);
   find_exec_name (file_name, execute_name);
   /* Initialize interrupt frame and load executable. */
   memset(&if_, 0, sizeof if_);
