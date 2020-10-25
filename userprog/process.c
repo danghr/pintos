@@ -45,6 +45,7 @@ process_execute(const char *file_name)
   tid = thread_create(execute_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page(fn_copy);
+  free(execute_name);
   return tid;
 }
 void 
@@ -90,7 +91,7 @@ start_process(void *file_name_)
   palloc_free_page(file_name);
   if (!success)
     thread_exit();
-
+  free(execute_name);
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
