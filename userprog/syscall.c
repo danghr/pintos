@@ -398,7 +398,7 @@ syscall_tell (int fd)
    implicitly closes all its open file descriptors, as if by calling 
    this function for each one. */
 int
-syscall_close (int fd UNUSED)
+syscall_close (int fd)
 {
   struct fd_entry *fd_e = get_fd_entry (fd);
   if (fd_e == NULL)
@@ -434,11 +434,11 @@ static int
 syscall_exit_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
-  if (!is_valid_addr ((void*)((int*)(f->esp + 1))))
+  if (!is_valid_addr ((void*)((int*)(f->esp + 4))))
     return -1;
   
   /* Decode parameters */
-  int status = *((int*)(f->esp + 1));
+  int status = *((int*)(f->esp + 4));
 
   /* Write the return value */
   syscall_exit (status);
@@ -449,11 +449,11 @@ static int
 syscall_exec_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
-  if (!is_valid_addr ((void*)((int*)(f->esp + 1))))
+  if (!is_valid_addr ((void*)((int*)(f->esp + 4))))
     return -1;
   
   /* Decode parameters */
-  char *cmd_line = (char*)((int*)(f->esp + 1));
+  char *cmd_line = (char*)((int*)(f->esp + 4));
 
   /* Write the return value */
   f->eax = syscall_exec (cmd_line);
@@ -464,11 +464,11 @@ static int
 syscall_wait_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
-  if (!is_valid_addr ((void*)((int*)(f->esp + 1))))
+  if (!is_valid_addr ((void*)((int*)(f->esp + 4))))
     return -1;
   
   /* Decode parameters */
-  pid_t pid = *(pid_t*)((int*)(f->esp + 1));
+  pid_t pid = *(pid_t*)((int*)(f->esp + 4));
 
   /* Write the return value */
   f->eax = syscall_wait (pid);
@@ -484,8 +484,8 @@ syscall_create_wrapper (struct intr_frame *f)
         return -1;
   
   /* Decode parameters */
-  char *file = (char*)((int*)(f->esp + 1));
-  unsigned initial_size = *((unsigned*)(f->esp + 2));
+  char *file = (char*)((int*)(f->esp + 4));
+  unsigned initial_size = *((unsigned*)(f->esp + 8));
 
   /* Write the return value */
   f->eax = syscall_create (file, initial_size);
@@ -496,11 +496,11 @@ static int
 syscall_remove_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
-  if (!is_valid_addr ((void*)((int*)(f->esp + 1))))
+  if (!is_valid_addr ((void*)((int*)(f->esp + 4))))
     return -1;
   
   /* Decode parameters */
-  char *file = (char*)((int*)(f->esp + 1));
+  char *file = (char*)((int*)(f->esp + 4));
 
   /* Write the return value */
   f->eax = syscall_remove (file);
@@ -511,11 +511,11 @@ static int
 syscall_open_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
-  if (!is_valid_addr ((void*)((int*)(f->esp + 1))))
+  if (!is_valid_addr ((void*)((int*)(f->esp + 4))))
     return -1;
   
   /* Decode parameters */
-  char *file = (char*)((int*)(f->esp + 1));
+  char *file = (char*)((int*)(f->esp + 4));
 
   /* Write the return value */
   f->eax = syscall_open (file);
@@ -526,11 +526,11 @@ static int
 syscall_filesize_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
-  if (!is_valid_addr ((void*)((int*)(f->esp + 1))))
+  if (!is_valid_addr ((void*)((int*)(f->esp + 4))))
     return -1;
   
   /* Decode parameters */
-  int fd = *((int*)(f->esp + 1));
+  int fd = *((int*)(f->esp + 4));
 
   /* Write the return value */
   int ret = syscall_filesize (fd);
@@ -549,9 +549,9 @@ syscall_read_wrapper (struct intr_frame *f)
       return -1;
   
   /* Decode parameters */
-  int fd = *((int*)(f->esp + 1));
-  void *buffer = (void*)((int*)(f->esp + 2));
-  unsigned length = *((unsigned*)(f->esp + 3));
+  int fd = *((int*)(f->esp + 4));
+  void *buffer = (void*)((int*)(f->esp + 8));
+  unsigned length = *((unsigned*)(f->esp + 12));
 
   /* Write the return value */
   f->eax = syscall_read (fd, buffer, length);
@@ -567,9 +567,9 @@ syscall_write_wrapper (struct intr_frame *f)
       return -1;
   
   /* Decode parameters */
-  int fd = *((int*)(f->esp + 1));
-  void *buffer = (void*)((int*)(f->esp + 2));
-  unsigned length = *((unsigned*)(f->esp + 3));
+  int fd = *((int*)(f->esp + 4));
+  void *buffer = (void*)((int*)(f->esp + 8));
+  unsigned length = *((unsigned*)(f->esp + 12));
 
   /* Write the return value */
   f->eax = syscall_write (fd, buffer, length);
@@ -585,8 +585,8 @@ syscall_seek_wrapper (struct intr_frame *f)
       return -1;
   
   /* Decode parameters */
-  int fd = *((int*)(f->esp + 1));
-  unsigned position = *((unsigned*)(f->esp + 2));
+  int fd = *((int*)(f->esp + 4));
+  unsigned position = *((unsigned*)(f->esp + 8));
 
   /* Execute the function */
   return syscall_seek (fd, position);
@@ -596,11 +596,11 @@ static int
 syscall_tell_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
-  if (!is_valid_addr ((void*)((int*)(f->esp + 1))))
+  if (!is_valid_addr ((void*)((int*)(f->esp + 4))))
     return -1;
   
   /* Decode parameters */
-  int fd = *((int*)(f->esp + 1));
+  int fd = *((int*)(f->esp + 4));
 
   /* Execute the function and write the return value */
   int ret = syscall_tell (fd);
@@ -614,11 +614,11 @@ static int
 syscall_close_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
-  if (!is_valid_addr ((void*)((int*)(f->esp + 1))))
+  if (!is_valid_addr ((void*)((int*)(f->esp + 4))))
     return -1;
   
   /* Decode parameters */
-  int fd = *((int*)(f->esp + 1));
+  int fd = *((int*)(f->esp + 4));
 
   /* Execute the function */
   return syscall_close (fd);
