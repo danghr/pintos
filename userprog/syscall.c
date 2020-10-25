@@ -350,7 +350,7 @@ syscall_write (int fd, const void *buffer, unsigned length)
 {
   if (fd == STDOUT_FILENO)
     {
-      putbuf ((char *)buffer, (size_t)length);
+      putbuf (buffer, (size_t)length);
       return (int)length;
     }
   struct fd_entry *fd_e = get_fd_entry (fd);
@@ -550,7 +550,7 @@ syscall_read_wrapper (struct intr_frame *f)
   
   /* Decode parameters */
   int fd = *((int*)(f->esp + 4));
-  void *buffer = (void*)((int*)(f->esp + 8));
+  void *buffer = *(char**)(f->esp + 8);
   unsigned length = *((unsigned*)(f->esp + 12));
 
   /* Write the return value */
@@ -568,7 +568,7 @@ syscall_write_wrapper (struct intr_frame *f)
   
   /* Decode parameters */
   int fd = *((int*)(f->esp + 4));
-  void *buffer = (void*)((int*)(f->esp + 8));
+  void *buffer = *(char**)(f->esp + 8);
   unsigned length = *((unsigned*)(f->esp + 12));
 
   /* Write the return value */
