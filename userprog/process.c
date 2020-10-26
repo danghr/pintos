@@ -143,7 +143,7 @@ int process_wait(tid_t child_tid)
   struct thread* curr_thread = thread_current();
   struct list curr_child_list = curr_thread->child_threads_list;
   struct thread* child_thread = NULL;
-
+  /* Find the corresponding thread of the child_tid. */
   for (struct list_elem* e = list_begin (&curr_child_list); e != list_end (&curr_child_list);
        e = list_next (e))
     {
@@ -154,19 +154,22 @@ int process_wait(tid_t child_tid)
         break;
       }
     }
-
+  /* If the thread of the child_tid is not child of current thread, then return -1. */
   if (child_thread == NULL)
   {
     return -1;
   }
-
-  if (child_thread->exit_status)
+  /* Block curr_thread if the child process doesn't exit. */
+  if (!child_thread->is_exited)
   {
     sema_down (&(curr_thread->waiting_sema));
   }
-
-  while (true)
-    thread_yield (); /* Tempory modification, see doc 3.2 */
+  else
+  {
+    return -1;
+  }
+  
+  return child_thread->exit_status;
 }
 
 /* Free the current process's resources. */
@@ -192,7 +195,7 @@ void process_exit(void)
     pagedir_destroy(pd);
     printf("%s: exit(%d)\n", cur->name, cur->exit_status);
   }
-
+  cur->is_exited = true;
   sema_up (&(cur->parent_thread->waiting_sema));
 }
 

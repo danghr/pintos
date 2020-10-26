@@ -5,7 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 #include "fixed-point.h"
-
+#include "synch.h"
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -125,7 +125,7 @@ struct thread
     struct list_elem child_elem;
 
     struct semaphore waiting_sema;
-
+    bool is_exited;
     struct thread* parent_thread;
   };
 
