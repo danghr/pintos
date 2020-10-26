@@ -9,7 +9,7 @@
 \usepackage{multirow}
 \usepackage{longtable}
 \usepackage{verbatim}
-\usepackage{makecell}
+\usepackage{hyperref}
 
 % Allow URL Breakline
 \def\UrlBreaks{\do\A\do\B\do\C\do\D\do\E\do\F\do\G\do\H\do\I\do\J
@@ -27,17 +27,21 @@
     %% The "author" command and its associated commands are used to define the authors and their affiliations.
     \author{Tianyi Zhang}
     \affiliation{%
-        \institution{School of Information Science and Technology}
         \state{2018533074}
     }
     \email{zhangty2@shanghaitech.edu.cn}
 
     \author{Haoran Dang}
     \affiliation{%
-        \institution{School of Information Science and Technology}
         \state{2018533259}
     }
     \email{danghr@shanghaitech.edu.cn}
+
+    \author{Derun Li}
+    \affiliation{%
+        \state{0000000000}
+    }
+    \email{lidr@shanghaitech.edu.cn}
 
     \maketitle
 
@@ -69,21 +73,30 @@
         
             \subsubsection{Copy here the declaration of each new or changed `\texttt{struct}' or `\texttt{struct}' member, global or static variable, `\texttt{typedef}', or enumeration. Identify the purpose of each in 25 words or less. } 
             
-                \begin{itemize}
-                    \item In file \texttt{}
-\begin{verbatim}
-\end{verbatim}
-                \end{itemize}
+            No modified data structure in this project. 
         
         \subsection{Algorithms}
         
             \subsubsection{Briefly describe how you implemented argument parsing.  How do you arrange for the elements of \texttt{argv[]} to be in the right order?  How do you avoid overflowing the stack page? }
+
+            In function \texttt{process\_execute()} of \texttt{userprog/process.c}, we create the new thread with the thread name picked by our newly-added function \texttt{find\_exec\_name()}, which picks the name of the executable from the \texttt{file\_name} so that the name of the thread is correct. 
+
+            Then in function \texttt{setup\_stack()} of \texttt{userprog/process.c}, we add two pointers to store \texttt{argc} and \texttt{argv} after calling our newly-added \texttt{find\_args()} in \texttt{load()} to seperate them, which ensures that they are arranged in correct order. Then we push these arguments in correct places according to \href{http://web.stanford.edu/~ouster/cgi-bin/cs140-spring20/pintos/pintos_3.html#SEC51}{Section 3.5.1 of Pintos Document}. 
+
+            Number of \texttt{args[]} is limited by \texttt{MAX\_ARGS} and \texttt{MAX\_CMD\_LENGTH}, which ensures that the stack is not overflowed. 
         
         \subsection{Rationale}
             
             \subsubsection{Why does Pintos implement \texttt{strtok\_r()} but not \texttt{strtok()}?} 
 
+                \texttt{strtok()} does not save the remaining part of the process but \\\texttt{strtok\_r()} saves it in \texttt{*save\_ptr}, which keeps the safety of the operation when multiple thread is accessing the same string. 
+
             \subsubsection{In Pintos, the kernel separates commands into a executable name and arguments.  In Unix-like systems, the shell does this separation.  Identify at least two advantages of the Unix approach.} 
+
+            \begin{itemize}
+                \item It is easier to identify the file name instead of fetching from the command so that time can be saved when finding and opening the executable. 
+                \item If the name of the executable file contains special characters (like spaces), the kernel can also handle it easily. 
+            \end{itemize}
     
     \section{System Calls}
 
@@ -159,27 +172,27 @@ struct thread
     \section*{Contributors}
 
         \begin{center}
-            \begin{tabular}{|c|c|c|c|}
+            \begin{tabular}{|c|c|c|c|c|}
                 \hline
-                \multicolumn{2}{|c|}{Task} & \makecell{Tianyi\\Zhang} & \makecell{Haoran\\Dang} \\
+                \multicolumn{2}{|c|}{Task} & \makecell{Tianyi\\Zhang} & \makecell{Haoran\\Dang} & \makecell{Derun\\Li} \\
                 \hline
-                \multirow{4}{*}{\makecell{Task \ref{Argument Passing} \\ Argument Passing}} 
-                    & Concept &  &  \\
-                    \cline{2-4}
-                    & Implementation &  &  \\
-                    \cline{2-4}
-                    & Debugging &  &  \\
-                    \cline{2-4}
-                    & Design Document & &  \\
+                \multirow{4}{*}{\makecell{Task 1 \\ Argument \\ Passing}} 
+                    & Concept & \checkmark & \checkmark & \checkmark \\
+                    \cline{2-5}
+                    & Implementation & \checkmark & \checkmark &  \\
+                    \cline{2-5}
+                    & Debugging &  & \checkmark &  \\
+                    \cline{2-5}
+                    & Design Document &  & \checkmark &  \\
                 \hline
-                \multirow{4}{*}{\makecell{Task \ref{System Calls} \\ System Calls}} 
-                    & Concept &  &  \\
-                    \cline{2-4}
-                    & Implementation &  &  \\
-                    \cline{2-4}
-                    & Debugging &  & \\
-                    \cline{2-4}
-                    & Design Document &  & \\
+                \multirow{4}{*}{\makecell{Task 2 \\ System \\ Calls}} 
+                    & Concept & \checkmark & \checkmark & \checkmark \\
+                    \cline{2-5}
+                    & Implementation & \checkmark &  & \checkmark \\
+                    \cline{2-5}
+                    & Debugging &  &  &  \\
+                    \cline{2-5}
+                    & Design Document &  &  &  \\
                 \hline
             \end{tabular}
         \end{center}
