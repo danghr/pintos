@@ -18,6 +18,7 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/synch.h"
 
 static thread_func start_process NO_RETURN;
 static bool load(const char *cmdline, void (**eip)(void), void **esp);
@@ -137,8 +138,33 @@ start_process(void *file_name_)
 
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
-int process_wait(tid_t child_tid UNUSED)
+int process_wait(tid_t child_tid)
 {
+  struct thread* curr_thread = thread_current();
+  struct list curr_child_list = curr_thread->child_threads_list;
+  struct thread* child_thread = NULL;
+
+  for (struct list_elem* e = list_begin (&curr_child_list); e != list_end (&curr_child_list);
+       e = list_next (e))
+    {
+      struct thread *t = list_entry (e, struct thread, child_elem);
+      if (t->tid == child_tid)
+      {
+        child_thread = t;
+        break;
+      }
+    }
+
+  if (child_thread == NULL)
+  {
+    return -1;
+  }
+
+  if (child_thread->exit_status)
+  {
+    sema_down (&(curr_thread->waiting_sema));
+  }
+
   while (true)
     thread_yield (); /* Tempory modification, see doc 3.2 */
 }
@@ -166,6 +192,8 @@ void process_exit(void)
     pagedir_destroy(pd);
     printf("%s: exit(%d)\n", cur->name, cur->exit_status);
   }
+
+  sema_up (&(cur->parent_thread->waiting_sema));
 }
 
 /* Sets up the CPU for running user code in the current

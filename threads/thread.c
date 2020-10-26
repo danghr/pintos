@@ -65,6 +65,7 @@ static void idle (void *aux UNUSED);
 static struct thread *running_thread (void);
 static struct thread *next_thread_to_run (void);
 static void init_thread (struct thread *, const char *name, int priority);
+static void init_thread_child (struct thread* t, struct thread* parent);
 static bool is_thread (struct thread *) UNUSED;
 static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
@@ -166,6 +167,7 @@ tid_t
 thread_create (const char *name, int priority,
                thread_func *function, void *aux) 
 {
+  struct thread* parent_thread = thread_current();
   struct thread *t;
   struct kernel_thread_frame *kf;
   struct switch_entry_frame *ef;
@@ -179,8 +181,10 @@ thread_create (const char *name, int priority,
   if (t == NULL)
     return TID_ERROR;
 
-  /* Initialize thread. */
+  /* Initialize thread. */ 
+ 
   init_thread (t, name, priority);
+  init_thread_child (t, parent_thread);
   tid = t->tid = allocate_tid ();
 
   /* Stack frame for kernel_thread(). */
@@ -467,6 +471,18 @@ init_thread (struct thread *t, const char *name, int priority)
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
+  list_init (&(t->child_threads_list));
+
+  sema_init(&(t->waiting_sema), 0);
+}
+
+static void init_thread_child (struct thread* t, struct thread* parent)
+{
+  if (t != parent)
+  {
+    list_push_back (&(parent->child_threads_list), &(t->child_elem));
+    t->parent_thread = parent;
+  }
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and

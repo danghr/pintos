@@ -119,6 +119,14 @@ struct thread
    /* Variables used in advanced schedular. */
     int nice;                           /* "nice" value of a thread. */
     fixed_point recent_cpu;             /* "recent_cpu" value of a thread. */
+
+    /* List used to store its child threads */
+    struct list child_threads_list;
+    struct list_elem child_elem;
+
+    struct semaphore waiting_sema;
+
+    struct thread* parent_thread;
   };
 
 /* If false (default), use round-robin scheduler.
