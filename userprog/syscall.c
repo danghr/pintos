@@ -452,7 +452,7 @@ syscall_exec_wrapper (struct intr_frame *f)
     return -1;
   
   /* Decode parameters */
-  char *cmd_line = (char*)((int*)(f->esp + 4));
+  char *cmd_line = *(char**)((int*)(f->esp + 4));
 
   /* Write the return value */
   f->eax = syscall_exec (cmd_line);
@@ -498,7 +498,7 @@ syscall_remove_wrapper (struct intr_frame *f)
     return -1;
   
   /* Decode parameters */
-  char *file = (char*)((int*)(f->esp + 4));
+  char *file = *(char**)((int*)(f->esp + 4));
 
   /* Write the return value */
   f->eax = syscall_remove (file);
@@ -513,7 +513,7 @@ syscall_open_wrapper (struct intr_frame *f)
     return -1;
   
   /* Decode parameters */
-  char *file = (char*)((int*)(f->esp + 4));
+  char *file = *(char**)((int*)(f->esp + 4));
 
   /* Write the return value */
   f->eax = syscall_open (file);
