@@ -126,6 +126,7 @@ struct thread
 
     struct semaphore waiting_sema;
     bool is_exited;
+    bool is_waited;
     struct thread* parent_thread;
   };
 

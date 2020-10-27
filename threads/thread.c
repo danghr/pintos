@@ -475,6 +475,7 @@ init_thread (struct thread *t, const char *name, int priority)
 
   sema_init(&(t->waiting_sema), 0);
   t->is_exited = false;
+  t->is_waited = false;
 }
 
 static void init_thread_child (struct thread* t, struct thread* parent)

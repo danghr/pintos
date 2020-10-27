@@ -169,8 +169,7 @@ syscall_handler (struct intr_frame *f)
      See section 3.5.2 in the doc for details. */
   int syscall_num = *(int*)(f->esp);
   int wrapper_return;
-
-  /* Check wheteher correct syscall num is correct */
+  /* Check whether correct syscall num is correct */
   if (syscall_num < 0 || syscall_num >= 20)
     {
       terminate_program (-1);
@@ -484,9 +483,8 @@ syscall_create_wrapper (struct intr_frame *f)
         return -1;
   
   /* Decode parameters */
-  char *file = (char*)((int*)(f->esp + 4));
+  char *file = *(char**)((int*)(f->esp + 4));
   unsigned initial_size = *((unsigned*)(f->esp + 8));
-
   /* Write the return value */
   f->eax = syscall_create (file, initial_size);
   return 0;
@@ -561,6 +559,7 @@ syscall_read_wrapper (struct intr_frame *f)
 static int
 syscall_write_wrapper (struct intr_frame *f)
 {
+  // printf("esp:%d, base:%d, diff:%d \n",(unsigned)f->esp, (unsigned)PHYS_BASE, (unsigned)PHYS_BASE - (unsigned)f->esp);
   /* Validate memory address */
   for (int i = 1; i <= 3; i++)
     if (!is_valid_addr ((void*)((int*)(f->esp + i))))
