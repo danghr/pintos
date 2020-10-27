@@ -471,7 +471,10 @@ init_thread (struct thread *t, const char *name, int priority)
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
+
+  t->next_fd = 3;
   list_init (&(t->child_threads_list));
+  list_init (&(t->opened_files));
 
   sema_init(&(t->waiting_sema), 0);
   t->is_exited = false;
