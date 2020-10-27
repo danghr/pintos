@@ -481,10 +481,15 @@ syscall_create_wrapper (struct intr_frame *f)
   for (int i = 1; i <= 2; i++)
     if (!is_valid_addr ((void*)((int*)(f->esp + i))))
         return -1;
-  
+
   /* Decode parameters */
   char *file = *(char**)((int*)(f->esp + 4));
   unsigned initial_size = *((unsigned*)(f->esp + 8));
+
+  if (file == NULL || !is_valid_addr(file))
+  {
+    terminate_program(-1);
+  }
   /* Write the return value */
   f->eax = syscall_create (file, initial_size);
   return 0;
