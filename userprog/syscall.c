@@ -293,7 +293,6 @@ syscall_open (const char *file)
   list_push_back (&(thread_current ()->opened_files), 
     &(opened_file->elem));
 
-  printf("%d", opened_file->fd);
   /* Return the file descriptor */
   return opened_file->fd;
 }
