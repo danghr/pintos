@@ -163,7 +163,7 @@ is_valid_addr (const void *uaddr)
 static void
 syscall_handler (struct intr_frame *f) 
 {
-  if (!is_valid_addr (f->esp))
+  if (!is_valid_addr (f->esp + 4))
     terminate_program (-1);
   /* System call number is saved in stack pointer (f->esp).
      See section 3.5.2 in the doc for details. */
@@ -217,6 +217,7 @@ syscall_halt (void)
 void
 syscall_exit (int status)
 {
+
   terminate_program (status);
 }
 
@@ -432,7 +433,7 @@ static int
 syscall_exit_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
-  if (!is_valid_addr ((void*)((int*)(f->esp + 4))))
+  if (!is_valid_addr ((void*)((int*)(f->esp + 8))))
     return -1;
   
   /* Decode parameters */
@@ -442,7 +443,17 @@ syscall_exit_wrapper (struct intr_frame *f)
   syscall_exit (status);
   return 0;
 }
-
+bool 
+check_the_string(void *str){
+  while(is_valid_addr(str)&&(*(char *)str != '\0'))
+  {
+    (char*)str++;
+  }
+  if(is_valid_addr(str)&&(*(char *)str == '\0'))
+    return true;
+  else 
+    return false;
+}
 static int
 syscall_exec_wrapper (struct intr_frame *f)
 {
@@ -453,7 +464,7 @@ syscall_exec_wrapper (struct intr_frame *f)
   /* Decode parameters */
   char *cmd_line = *(char**)((int*)(f->esp + 4));
 
-  if (cmd_line == NULL || !is_valid_addr(cmd_line))
+  if (cmd_line == NULL || !check_the_string(cmd_line))
   {
     terminate_program(-1);
   }
@@ -467,7 +478,7 @@ static int
 syscall_wait_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
-  if (!is_valid_addr ((void*)((int*)(f->esp + 4))))
+  if (!is_valid_addr ((void*)((int*)(f->esp + 8))))
     return -1;
   
   /* Decode parameters */
@@ -482,7 +493,7 @@ static int
 syscall_create_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
-  for (int i = 1; i <= 2; i++)
+  for (int i = 1; i <= 3; i++)
     if (!is_valid_addr ((void*)((int*)(f->esp + i * 4))))
         return -1;
 
@@ -490,7 +501,7 @@ syscall_create_wrapper (struct intr_frame *f)
   char *file = *(char**)((int*)(f->esp + 4));
   unsigned initial_size = *((unsigned*)(f->esp + 8));
 
-  if (file == NULL || !is_valid_addr(file))
+  if (file == NULL || !check_the_string(file))
   {
     terminate_program(-1);
   }
@@ -509,7 +520,7 @@ syscall_remove_wrapper (struct intr_frame *f)
   /* Decode parameters */
   char *file = *(char**)((int*)(f->esp + 4));
 
-  if (file == NULL || !is_valid_addr(file))
+  if (file == NULL || !check_the_string(file))
   {
     terminate_program(-1);
   }
@@ -528,7 +539,7 @@ syscall_open_wrapper (struct intr_frame *f)
   
   /* Decode parameters */
   char *file = *(char**)((int*)(f->esp + 4));
-  if (file == NULL || !is_valid_addr(file))
+  if (file == NULL || !check_the_string(file))
   {
     terminate_program(-1);
   }
@@ -541,8 +552,9 @@ syscall_open_wrapper (struct intr_frame *f)
 static int
 syscall_filesize_wrapper (struct intr_frame *f)
 {
+
   /* Validate memory address */
-  if (!is_valid_addr ((void*)((int*)(f->esp + 4))))
+  if (!is_valid_addr ((void*)((int*)(f->esp + 8))))
     return -1;
   
   /* Decode parameters */
@@ -560,7 +572,7 @@ static int
 syscall_read_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
-  for (int i = 1; i <= 3; i++)
+  for (int i = 1; i <= 4; i++)
     if (!is_valid_addr ((void*)((int*)(f->esp + i * 4))))
       return -1;
   
@@ -569,7 +581,7 @@ syscall_read_wrapper (struct intr_frame *f)
   void *buffer = *(char**)(f->esp + 8);
   unsigned length = *((unsigned*)(f->esp + 12));
 
-  if (buffer == NULL || !is_valid_addr(buffer + length - 1))
+  if (buffer == NULL || !is_valid_addr(buffer + length ))
   {
     terminate_program(-1);
   }
@@ -584,30 +596,29 @@ syscall_write_wrapper (struct intr_frame *f)
 {
   // printf("esp:%d, base:%d, diff:%d \n",(unsigned)f->esp, (unsigned)PHYS_BASE, (unsigned)PHYS_BASE - (unsigned)f->esp);
   /* Validate memory address */
-  for (int i = 1; i <= 3; i++)
-    if (!is_valid_addr ((void*)((int*)(f->esp + i * 4))))
+  for (int i = 1; i <= 4; i++)
+    if (!is_valid_addr ((void*)(((char *)f->esp + 4 * i))))
       return -1;
   
   /* Decode parameters */
   int fd = *((int*)(f->esp + 4));
   void *buffer = *(char**)(f->esp + 8);
   unsigned length = *((unsigned*)(f->esp + 12));
-  if (buffer == NULL || !is_valid_addr(buffer + length - 1))
+  if (buffer == NULL || !is_valid_addr((char *)buffer+length))
   {
-    terminate_program(-1);
+    return -1;
   }
 
   /* Write the return value */
   f->eax = syscall_write (fd, buffer, length);
   return 0;
 }
-
 static int
 syscall_seek_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
-  for (int i = 1; i <= 2; i++)
-    if (!is_valid_addr ((void*)((int*)(f->esp + i * 4))))
+  for (int i = 1; i <= 3; i++)
+    if (!is_valid_addr ((void*)((char *)f->esp + i * 4)))
       return -1;
   
   /* Decode parameters */
@@ -622,7 +633,7 @@ static int
 syscall_tell_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
-  if (!is_valid_addr ((void*)((int*)(f->esp + 4))))
+  if (!is_valid_addr ((void*)((char *)f->esp + 8)))
     return -1;
   
   /* Decode parameters */
@@ -640,7 +651,7 @@ static int
 syscall_close_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
-  if (!is_valid_addr ((void*)((int*)(f->esp + 4))))
+  if (!is_valid_addr ((void*)((char *)f->esp + 8)))
     return -1;
   
   /* Decode parameters */
