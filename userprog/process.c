@@ -144,10 +144,16 @@ start_process(void *file_name_)
 int process_wait(tid_t child_tid)
 {
   struct thread* curr_thread = thread_current();
-  struct list curr_child_list = curr_thread->child_threads_list;
+  struct list* curr_child_list = &(curr_thread->child_threads_list);
   struct thread* child_thread = NULL;
+
+  if (list_empty(curr_child_list))
+  {
+    return -1;
+  }
+
   /* Find the corresponding thread of the child_tid. */
-  for (struct list_elem* e = list_begin (&curr_child_list); e != list_end (&curr_child_list);
+  for (struct list_elem* e = list_begin (curr_child_list); e != list_end (curr_child_list);
        e = list_next (e))
     {
       struct thread *t = list_entry (e, struct thread, child_elem);

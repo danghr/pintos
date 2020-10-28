@@ -476,7 +476,6 @@ init_thread (struct thread *t, const char *name, int priority)
   t->exit_status = 0;
   list_init (&(t->child_threads_list));
   list_init (&(t->opened_files));
-
   sema_init(&(t->waiting_sema), 0);
   t->is_exited = false;
   t->is_waited = false;
