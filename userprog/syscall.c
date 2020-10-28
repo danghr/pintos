@@ -178,7 +178,7 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f) 
 {
-  if (!is_valid_addr (f->esp + 4))
+  if (!is_valid_addr (f->esp) || !is_valid_addr (f->esp + 4))
     terminate_program (-1);
   /* System call number is saved in stack pointer (f->esp).
      See section 3.5.2 in the doc for details. */
