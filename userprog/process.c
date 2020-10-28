@@ -304,6 +304,9 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
   int argc;
   char fn_copy[MAX_CMD_LENGTH];
 
+  /* If terminated during load process, exit_status will be -1 */
+  thread_current ()->exit_status = -1;
+
   /* Copy the file name and find the arguments */
   strlcpy (fn_copy, file_name, MAX_CMD_LENGTH);
   find_args (fn_copy, &argc, argv);
@@ -393,6 +396,9 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
 
   /* Start address. */
   *eip = (void (*)(void))ehdr.e_entry;
+
+  /* Restore terminate process to zero when success */
+  thread_current ()->exit_status = 0;
 
   success = true;
 
