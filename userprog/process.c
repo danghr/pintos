@@ -19,6 +19,7 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "threads/synch.h"
+#include "threads/thread.h"
 
 static thread_func start_process NO_RETURN;
 static bool load(const char *cmdline, void (**eip)(void), void **esp);
@@ -35,11 +36,6 @@ process_execute(const char *file_name)
   /* The first words in file name. */
   char *execute_name = malloc(MAX_EXEC_NAME_LENGTH);
   find_exec_name (file_name, execute_name);
-
-  /* Check whether the file to be executed exists */
-  if (filesys_open (execute_name) == NULL)
-    return TID_ERROR;
-  
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page(0);
@@ -161,20 +157,31 @@ int process_wait(tid_t child_tid)
     }
   /* If the thread of the child_tid is not child of current thread, then return -1. */
   if (child_thread == NULL)
+  {
     return -1;
+  }
 
   if (child_thread->is_waited)
+  {
     return -1;
+  }
   else
+  {
     child_thread->is_waited = true;
-  
+  }
+
   /* Block curr_thread if the child process doesn't exit. */
   if (!child_thread->is_exited)
+  {
+    curr_thread->is_waiting = true;
     sema_down (&(curr_thread->waiting_sema));
+    curr_thread->is_waiting = false;
+    return child_thread->exit_status;
+  }
   else
+  {
     return -1;
-
-  return child_thread->exit_status;
+  }
 }
 
 /* Free the current process's resources. */
@@ -199,9 +206,10 @@ void process_exit(void)
     pagedir_activate(NULL);
     pagedir_destroy(pd);
     printf("%s: exit(%d)\n", cur->name, cur->exit_status);
+    cur->is_exited = true;
+    sema_up (&(cur->parent_thread->waiting_sema));
+    thread_yield();
   }
-  cur->is_exited = true;
-  sema_up (&(cur->parent_thread->waiting_sema));
 }
 
 /* Sets up the CPU for running user code in the current
@@ -304,9 +312,6 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
   int argc;
   char fn_copy[MAX_CMD_LENGTH];
 
-  /* If terminated during load process, exit_status will be -1 */
-  thread_current ()->exit_status = -1;
-
   /* Copy the file name and find the arguments */
   strlcpy (fn_copy, file_name, MAX_CMD_LENGTH);
   find_args (fn_copy, &argc, argv);
@@ -396,9 +401,6 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
 
   /* Start address. */
   *eip = (void (*)(void))ehdr.e_entry;
-
-  /* Restore terminate process to zero when success */
-  thread_current ()->exit_status = 0;
 
   success = true;
 
