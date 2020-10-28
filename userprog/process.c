@@ -35,6 +35,11 @@ process_execute(const char *file_name)
   /* The first words in file name. */
   char *execute_name = malloc(MAX_EXEC_NAME_LENGTH);
   find_exec_name (file_name, execute_name);
+
+  /* Check whether the file to be executed exists */
+  if (filesys_open (execute_name) == NULL)
+    return TID_ERROR;
+  
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page(0);

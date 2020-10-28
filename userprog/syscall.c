@@ -109,6 +109,41 @@ get_fd_entry (int fd)
   return NULL;
 }
 
+/* Helper functions */
+
+/* Kill the program which is violating the system */
+void
+terminate_program (int exit_status)
+{
+  thread_current ()->exit_status = exit_status;
+  thread_exit ();
+}
+
+/* Verify that a memory address is valid in user program */
+static bool
+is_valid_addr (const void *uaddr)
+{
+  if (!is_user_vaddr (uaddr))
+    return false;
+  if (pagedir_get_page (thread_current ()->pagedir, uaddr) 
+    == NULL)
+    return false;
+  return true;
+}
+
+/* Check the validation of the string */
+bool 
+check_the_string (void *str){
+  while (is_valid_addr (str) && (*(char*)str != '\0'))
+    (char*)str++;
+  
+  if (is_valid_addr (str) && (*(char*)str == '\0'))
+    return true;
+  else 
+    return false;
+}
+
+/* Initialize the systemcall handlers */
 void
 syscall_init (void) 
 {
@@ -135,26 +170,6 @@ syscall_init (void)
   syscall_handler_wrapper[SYS_INUMBER] = &syscall_inumber_wrapper;
   filesys_lock = malloc (sizeof (struct lock));
   lock_init (filesys_lock);
-}
-
-/* Kill the program which is violating the system */
-void
-terminate_program (int exit_status)
-{
-  thread_current ()->exit_status = exit_status;
-  thread_exit ();
-}
-
-/* Verify that a memory address is valid in user program */
-static bool
-is_valid_addr (const void *uaddr)
-{
-  if (!is_user_vaddr (uaddr))
-    return false;
-  if (pagedir_get_page (thread_current ()->pagedir, uaddr) 
-    == NULL)
-    return false;
-  return true;
 }
 
 /* System call handler.
@@ -433,41 +448,32 @@ static int
 syscall_exit_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
-  if (!is_valid_addr ((void*)((int*)(f->esp + 8))))
+  if (!is_valid_addr ((void*)(f->esp + 8)))
     return -1;
   
   /* Decode parameters */
-  int status = *((int*)(f->esp + 4));
+  int status = *(int*)(f->esp + 4);
 
   /* Write the return value */
   syscall_exit (status);
   return 0;
 }
-bool 
-check_the_string(void *str){
-  while(is_valid_addr(str)&&(*(char *)str != '\0'))
-  {
-    (char*)str++;
-  }
-  if(is_valid_addr(str)&&(*(char *)str == '\0'))
-    return true;
-  else 
-    return false;
-}
+
 static int
 syscall_exec_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
-  if (!is_valid_addr ((void*)((int*)(f->esp + 4))))
+  if (!is_valid_addr (f->esp + 8))
     return -1;
   
   /* Decode parameters */
-  char *cmd_line = *(char**)((int*)(f->esp + 4));
+  char *cmd_line = *(char**)(f->esp + 4);
 
-  if (cmd_line == NULL || !check_the_string(cmd_line))
-  {
-    terminate_program(-1);
-  }
+  if (cmd_line == NULL || !check_the_string (cmd_line))
+    {
+      terminate_program (-1);
+      return -1;
+    }
 
   /* Write the return value */
   f->eax = syscall_exec (cmd_line);
@@ -478,11 +484,11 @@ static int
 syscall_wait_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
-  if (!is_valid_addr ((void*)((int*)(f->esp + 8))))
+  if (!is_valid_addr (f->esp + 8))
     return -1;
   
   /* Decode parameters */
-  pid_t pid = *(pid_t*)((int*)(f->esp + 4));
+  pid_t pid = *(pid_t*)(f->esp + 4);
 
   /* Write the return value */
   f->eax = syscall_wait (pid);
@@ -494,17 +500,19 @@ syscall_create_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
   for (int i = 1; i <= 3; i++)
-    if (!is_valid_addr ((void*)((int*)(f->esp + i * 4))))
-        return -1;
+    if (!is_valid_addr (f->esp + i * 4))
+      return -1;
 
   /* Decode parameters */
-  char *file = *(char**)((int*)(f->esp + 4));
-  unsigned initial_size = *((unsigned*)(f->esp + 8));
+  char *file = *(char**)(f->esp + 4);
+  unsigned initial_size = *(unsigned*)(f->esp + 8);
 
-  if (file == NULL || !check_the_string(file))
-  {
-    terminate_program(-1);
-  }
+  if (file == NULL || !check_the_string (file))
+    {
+      terminate_program (-1);
+      return -1;
+    }
+  
   /* Write the return value */
   f->eax = syscall_create (file, initial_size);
   return 0;
@@ -514,16 +522,17 @@ static int
 syscall_remove_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
-  if (!is_valid_addr ((void*)((int*)(f->esp + 4))))
+  if (!is_valid_addr (f->esp + 8))
     return -1;
   
   /* Decode parameters */
-  char *file = *(char**)((int*)(f->esp + 4));
+  char *file = *(char**)(f->esp + 4);
 
-  if (file == NULL || !check_the_string(file))
-  {
-    terminate_program(-1);
-  }
+  if (file == NULL || !check_the_string (file))
+    {
+      terminate_program (-1);
+      return -1;
+    }
 
   /* Write the return value */
   f->eax = syscall_remove (file);
@@ -534,15 +543,16 @@ static int
 syscall_open_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
-  if (!is_valid_addr ((void*)((int*)(f->esp + 4))))
+  if (!is_valid_addr (f->esp + 8))
     return -1;
   
   /* Decode parameters */
-  char *file = *(char**)((int*)(f->esp + 4));
-  if (file == NULL || !check_the_string(file))
-  {
-    terminate_program(-1);
-  }
+  char *file = *(char**)(f->esp + 4);
+  if (file == NULL || !check_the_string (file))
+    {
+      terminate_program (-1);
+      return -1;
+    }
 
   /* Write the return value */
   f->eax = syscall_open (file);
@@ -554,11 +564,11 @@ syscall_filesize_wrapper (struct intr_frame *f)
 {
 
   /* Validate memory address */
-  if (!is_valid_addr ((void*)((int*)(f->esp + 8))))
+  if (!is_valid_addr (f->esp + 8))
     return -1;
   
   /* Decode parameters */
-  int fd = *((int*)(f->esp + 4));
+  int fd = *(int*)(f->esp + 4);
 
   /* Write the return value */
   int ret = syscall_filesize (fd);
@@ -573,18 +583,20 @@ syscall_read_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
   for (int i = 1; i <= 4; i++)
-    if (!is_valid_addr ((void*)((int*)(f->esp + i * 4))))
+    if (!is_valid_addr (f->esp + i * 4))
       return -1;
   
   /* Decode parameters */
-  int fd = *((int*)(f->esp + 4));
+  int fd = *(int*)(f->esp + 4);
   void *buffer = *(char**)(f->esp + 8);
-  unsigned length = *((unsigned*)(f->esp + 12));
+  unsigned length = *(unsigned*)(f->esp + 12);
 
-  if (buffer == NULL || !is_valid_addr(buffer + length ))
-  {
-    terminate_program(-1);
-  }
+  if (buffer == NULL || !is_valid_addr (buffer) ||
+    !is_valid_addr (buffer + length))
+    {
+      terminate_program (-1);
+      return -1;
+    }
 
   /* Write the return value */
   f->eax = syscall_read (fd, buffer, length);
@@ -594,36 +606,39 @@ syscall_read_wrapper (struct intr_frame *f)
 static int
 syscall_write_wrapper (struct intr_frame *f)
 {
-  // printf("esp:%d, base:%d, diff:%d \n",(unsigned)f->esp, (unsigned)PHYS_BASE, (unsigned)PHYS_BASE - (unsigned)f->esp);
   /* Validate memory address */
   for (int i = 1; i <= 4; i++)
-    if (!is_valid_addr ((void*)(((char *)f->esp + 4 * i))))
+    if (!is_valid_addr (f->esp + 4 * i))
       return -1;
   
   /* Decode parameters */
   int fd = *((int*)(f->esp + 4));
   void *buffer = *(char**)(f->esp + 8);
   unsigned length = *((unsigned*)(f->esp + 12));
-  if (buffer == NULL || !is_valid_addr((char *)buffer+length))
-  {
-    return -1;
-  }
+
+  if (buffer == NULL || !is_valid_addr (buffer) || 
+    !is_valid_addr((char *)buffer+length))
+    {
+      terminate_program (-1);
+      return -1;
+    }
 
   /* Write the return value */
   f->eax = syscall_write (fd, buffer, length);
   return 0;
 }
+
 static int
 syscall_seek_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
   for (int i = 1; i <= 3; i++)
-    if (!is_valid_addr ((void*)((char *)f->esp + i * 4)))
+    if (!is_valid_addr (f->esp + 4 * i))
       return -1;
   
   /* Decode parameters */
-  int fd = *((int*)(f->esp + 4));
-  unsigned position = *((unsigned*)(f->esp + 8));
+  int fd = *(int*)(f->esp + 4);
+  unsigned position = *(unsigned*)(f->esp + 8);
 
   /* Execute the function */
   return syscall_seek (fd, position);
@@ -633,11 +648,11 @@ static int
 syscall_tell_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
-  if (!is_valid_addr ((void*)((char *)f->esp + 8)))
+  if (!is_valid_addr (f->esp + 8))
     return -1;
   
   /* Decode parameters */
-  int fd = *((int*)(f->esp + 4));
+  int fd = *(int*)(f->esp + 4);
 
   /* Execute the function and write the return value */
   int ret = syscall_tell (fd);
@@ -651,11 +666,11 @@ static int
 syscall_close_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
-  if (!is_valid_addr ((void*)((char *)f->esp + 8)))
+  if (!is_valid_addr (f->esp + 8))
     return -1;
   
   /* Decode parameters */
-  int fd = *((int*)(f->esp + 4));
+  int fd = *(int*)(f->esp + 4);
 
   /* Execute the function */
   return syscall_close (fd);
