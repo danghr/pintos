@@ -161,28 +161,18 @@ int process_wait(tid_t child_tid)
     }
   /* If the thread of the child_tid is not child of current thread, then return -1. */
   if (child_thread == NULL)
-  {
     return -1;
-  }
 
   if (child_thread->is_waited)
-  {
     return -1;
-  }
   else
-  {
     child_thread->is_waited = true;
-  }
   
   /* Block curr_thread if the child process doesn't exit. */
   if (!child_thread->is_exited)
-  {
     sema_down (&(curr_thread->waiting_sema));
-  }
   else
-  {
     return -1;
-  }
 
   return child_thread->exit_status;
 }

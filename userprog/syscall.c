@@ -186,9 +186,7 @@ syscall_handler (struct intr_frame *f)
   int wrapper_return;
   /* Check whether correct syscall num is correct */
   if (syscall_num < 0 || syscall_num >= 20)
-    {
       terminate_program (-1);
-    }
   
   /* Send it to correct wrapper to decode. 
      If the wrapper returns a non-zero status, then we can 
@@ -448,7 +446,7 @@ static int
 syscall_exit_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
-  if (!is_valid_addr ((void*)(f->esp + 8)))
+  if (!is_valid_addr (f->esp + 8))
     return -1;
   
   /* Decode parameters */
