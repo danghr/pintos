@@ -33,9 +33,6 @@ process_execute(const char *file_name)
 {
   char *fn_copy;
   tid_t tid;
-  struct list* curr_child_list = &(thread_current ()
-    ->child_threads_list);
-  struct thread* child_thread = NULL;
   /* The first words in file name. */
   char *execute_name = malloc(MAX_EXEC_NAME_LENGTH);
   find_exec_name (file_name, execute_name);
@@ -47,31 +44,16 @@ process_execute(const char *file_name)
     return TID_ERROR;
   strlcpy(fn_copy, file_name, PGSIZE);
 
-  /* Open file */
-  struct file *a = filesys_open (execute_name);
-  if (a == NULL)
+  /* Check whether the file exists */
+  struct file *file = filesys_open (execute_name);
+  if (file == NULL)
     return TID_ERROR;
+  file_close (file);
     
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (execute_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page(fn_copy);
-  
-  /* Deny writes to the executable of the new thread */
-  file_deny_write (a);
-  /* Find the corresponding thread of the child_tid. */
-  for (struct list_elem* e = list_begin (curr_child_list); 
-       e != list_end (curr_child_list);
-       e = list_next (e))
-    {
-      struct thread *t = list_entry (e, struct thread, child_elem);
-      if (t->tid == tid)
-      {
-        child_thread = t;
-        break;
-      }
-    }
-  child_thread->executing_file = a;
   
   free(execute_name);
   return tid;
@@ -237,8 +219,9 @@ void process_exit(void)
          directory, or our active page directory will be one
          that's been freed (and cleared). */
     /* Re-allow writes to the executable */
-    if (cur->executing_file != NULL)
-      file_allow_write (cur->executing_file);
+    if (cur->executing_file != NULL) {
+      file_close (cur->executing_file);
+    }
     cur->pagedir = NULL;
     pagedir_activate(NULL);
     pagedir_destroy(pd);
@@ -367,6 +350,9 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
     goto done;
   }
 
+  t->executing_file = file;
+  file_deny_write (file);
+
   /* Read and verify executable header. */
   if (file_read(file, &ehdr, sizeof ehdr) != sizeof ehdr || memcmp(ehdr.e_ident, "\177ELF\1\1\1", 7) || ehdr.e_type != 2 || ehdr.e_machine != 3 || ehdr.e_version != 1 || ehdr.e_phentsize != sizeof(struct Elf32_Phdr) || ehdr.e_phnum > 1024)
   {
@@ -443,7 +429,6 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
 
 done:
   /* We arrive here whether the load is successful or not. */
-  file_close(file);
   return success;
 }
 
