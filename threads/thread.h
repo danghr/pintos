@@ -94,8 +94,10 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
-    struct list_elem allelem;           /* List element for all threads list. */
-    int64_t sleeping_ticks;             /* A counter of remaining sleeping ticks. */
+    struct list_elem allelem;           /* List element for all threads
+                                           list. */
+    int64_t sleeping_ticks;             /* A counter of remaining sleeping 
+                                           ticks. */
    
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
@@ -114,7 +116,8 @@ struct thread
    /* Variables used in priority donation. */
     struct list locks;                  /* List of holding locks. */
     int priority_wo_donation;           /* Priority without donation. */
-    struct lock *lock_wait;             /* The lock a thread is waiting for. */
+    struct lock *lock_wait;             /* The lock a thread is waiting 
+                                           for. */
 
    /* Variables used in advanced schedular. */
     int nice;                           /* "nice" value of a thread. */
