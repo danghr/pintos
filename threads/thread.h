@@ -108,6 +108,8 @@ struct thread
     int exit_status;                    /* Exit status of the thread */
     int next_fd;                        /* Next file descriptor */
     struct list opened_files;           /* List of opened files */
+    struct file *executing_file;        /* Pointer to the executable of the 
+                                           current thread */
 #endif
 
     /* Owned by thread.c. */

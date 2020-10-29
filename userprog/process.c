@@ -33,22 +33,46 @@ process_execute(const char *file_name)
 {
   char *fn_copy;
   tid_t tid;
+  struct list* curr_child_list = &(thread_current ()
+    ->child_threads_list);
+  struct thread* child_thread = NULL;
   /* The first words in file name. */
   char *execute_name = malloc(MAX_EXEC_NAME_LENGTH);
   find_exec_name (file_name, execute_name);
+
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page(0);
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy(fn_copy, file_name, PGSIZE);
-  struct file *a = filesys_open(execute_name);
+
+  /* Open file */
+  struct file *a = filesys_open (execute_name);
   if (a == NULL)
     return TID_ERROR;
+    
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create(execute_name, PRI_DEFAULT, start_process, fn_copy);
+  tid = thread_create (execute_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page(fn_copy);
+  
+  /* Deny writes to the executable of the new thread */
+  file_deny_write (a);
+  /* Find the corresponding thread of the child_tid. */
+  for (struct list_elem* e = list_begin (curr_child_list); 
+       e != list_end (curr_child_list);
+       e = list_next (e))
+    {
+      struct thread *t = list_entry (e, struct thread, child_elem);
+      if (t->tid == tid)
+      {
+        child_thread = t;
+        break;
+      }
+    }
+  child_thread->executing_file = a;
+  
   free(execute_name);
   return tid;
 }
@@ -107,6 +131,7 @@ start_process(void *file_name_)
   bool success;
   char *execute_name = malloc(15);
   find_exec_name (file_name, execute_name);
+
   /* Initialize interrupt frame and load executable. */
   memset(&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
@@ -153,7 +178,8 @@ int process_wait(tid_t child_tid)
   }
 
   /* Find the corresponding thread of the child_tid. */
-  for (struct list_elem* e = list_begin (curr_child_list); e != list_end (curr_child_list);
+  for (struct list_elem* e = list_begin (curr_child_list); 
+       e != list_end (curr_child_list);
        e = list_next (e))
     {
       struct thread *t = list_entry (e, struct thread, child_elem);
@@ -210,6 +236,9 @@ void process_exit(void)
          directory before destroying the process's page
          directory, or our active page directory will be one
          that's been freed (and cleared). */
+    /* Re-allow writes to the executable */
+    if (cur->executing_file != NULL)
+      file_allow_write (cur->executing_file);
     cur->pagedir = NULL;
     pagedir_activate(NULL);
     pagedir_destroy(pd);

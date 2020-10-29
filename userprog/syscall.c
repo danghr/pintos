@@ -336,8 +336,9 @@ syscall_read (int fd, void *buffer, unsigned length)
   if (fd_e == NULL)
     return -1;
   lock_acquire (filesys_lock);
-  file_deny_write(fd_e->file);
+  file_deny_write (fd_e->file);
   ret = file_read (fd_e->file, buffer, length);
+  file_allow_write (fd_e->file);
   lock_release (filesys_lock);
   return ret;
 }

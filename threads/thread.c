@@ -480,6 +480,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->is_exited = false;
   t->is_waited = false;
   t->is_waiting = false;
+  t->executing_file = NULL;
 }
 
 static void init_thread_child (struct thread* t, struct thread* parent)
