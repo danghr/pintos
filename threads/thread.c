@@ -286,9 +286,7 @@ thread_exit (void)
 {
   ASSERT (!intr_context ());
 
-#ifdef USERPROG
   process_exit ();
-#endif
 
   /* Remove thread from all threads list, set our status to dying,
      and schedule another process.  That process will destroy us
@@ -473,7 +471,7 @@ init_thread (struct thread *t, const char *name, int priority)
   intr_set_level (old_level);
 
   t->next_fd = 3;
-  t->exit_status = 0;
+  t->exit_status = -1;
   list_init (&(t->child_threads_list));
   list_init (&(t->opened_files));
   sema_init(&(t->waiting_sema), 0);
