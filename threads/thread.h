@@ -30,6 +30,16 @@ typedef int tid_t;
 #define NICE_DEFAULT 0                  /* Default "nice" value. */
 #define NICE_MAX 20                     /* Highest "nice" value. */
 
+#define MAX_THREADS 300                 /* Max number of threads */
+
+/* List element of waiting child */
+struct waiting_sema
+{
+  struct list_elem elem;
+  int child_tid;
+  struct semaphore sema;
+};
+
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -129,7 +139,7 @@ struct thread
     struct list child_threads_list;
     struct list_elem child_elem;
 
-    struct semaphore waiting_sema;
+    struct list waiting;
     bool is_exited;
     bool is_waited;
     bool is_waiting;
@@ -140,6 +150,9 @@ struct thread
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
+
+/* File operation lock */
+struct lock file_lock;
 
 void thread_init (void);
 void thread_start (void);
