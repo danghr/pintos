@@ -73,7 +73,7 @@
         
             \subsubsection{Copy here the declaration of each new or changed `\texttt{struct}' or `\texttt{struct}' member, global or static variable, `\texttt{typedef}', or enumeration. Identify the purpose of each in 25 words or less. } 
             
-            No modified data structure in this project. 
+            No modified data structure in this part. 
         
         \subsection{Algorithms}
         
@@ -109,19 +109,65 @@
                 \begin{itemize}
                     \item In file \texttt{threads/threads.h}
 \begin{verbatim}
+/* List element of waiting child */
+struct waiting_sema
+{
+  /* List element */
+  struct list_elem elem;
+  /* TID of children */
+  int child_tid;
+  /* Semaphore corresponding to thread
+     TID */
+  struct semaphore sema;
+};
+
 struct thread
 {
     ...
-#ifdef USERPROG
-    ...
     /* Exit status of the thread */
     int exit_status;
-#endif
+    /* Next file descriptor */
+    int next_fd;
+    /* List of opened files */
+    struct list opened_files;
+    /* Pointer to the executable of 
+       thecurrent thread */
+    struct file *executing_file;        
     ...
-}\end{verbatim}
+    /* List used to store its child threads */
+    struct list child_threads_list;
+    /* List element of parent's 
+       child_threads_list */
+    struct list_elem child_elem;
+    /* List of waiting_sema of waiting 
+       threads */
+    struct list waiting;
+    /* Status of exited */
+    bool is_exited;
+    /* Status of being waited */
+    bool is_waited;
+    /* Status of waiting others */
+    bool is_waiting;
+    /* Pointer to parent thread */
+    struct thread* parent_thread;
+}
+
+/* File operation lock */
+struct lock file_lock;
+\end{verbatim}
+                    \item In file \texttt{userprog/syscall.c}
+\begin{verbatim}
+/* Interrupt handler wrapper functions */
+static int (*syscall_handler_wrapper[20]) 
+    (struct intr_frame *);
+\end{verbatim}
                 \end{itemize}
 
             \subsubsection{Describe how file descriptors are associated with open files.  Are file descriptors unique within the entire OS or just within a single process? }
+
+            A fixed integer \texttt{next\_fd} is saved in each thread. When opening a new file, if it exists, \texttt{allocate\_fd()} will be called and it will return \texttt{next\_fd++} whose value will be assigned to the opened file. 
+
+            The file descriptors are unique within just a single process. 
 
         \subsection{Algorithms}
 
@@ -179,7 +225,7 @@ struct thread
                 \multirow{4}{*}{\makecell{Task 1 \\ Argument \\ Passing}} 
                     & Concept & \checkmark & \checkmark & \checkmark \\
                     \cline{2-5}
-                    & Implementation & \checkmark & \checkmark &  \\
+                    & Implementation & \checkmark & \checkmark & \checkmark \\
                     \cline{2-5}
                     & Debugging &  & \checkmark &  \\
                     \cline{2-5}
@@ -188,11 +234,11 @@ struct thread
                 \multirow{4}{*}{\makecell{Task 2 \\ System \\ Calls}} 
                     & Concept & \checkmark & \checkmark & \checkmark \\
                     \cline{2-5}
-                    & Implementation & \checkmark &  & \checkmark \\
+                    & Implementation & \checkmark & \checkmark & \checkmark \\
                     \cline{2-5}
-                    & Debugging &  &  &  \\
+                    & Debugging & \checkmark & \checkmark & \checkmark \\
                     \cline{2-5}
-                    & Design Document &  &  &  \\
+                    & Design Document & \checkmark & \checkmark & \checkmark \\
                 \hline
             \end{tabular}
         \end{center}
