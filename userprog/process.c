@@ -23,6 +23,8 @@
 
 static thread_func start_process NO_RETURN;
 static bool load(const char *cmdline, void (**eip)(void), void **esp);
+static int exit_status[MAX_THREADS] = {-1};
+static bool is_exited[MAX_THREADS] = {false};
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -45,10 +47,15 @@ process_execute(const char *file_name)
   strlcpy(fn_copy, file_name, PGSIZE);
 
   /* Check whether the file exists */
+  lock_acquire (&file_lock);
   struct file *file = filesys_open (execute_name);
   if (file == NULL)
-    return TID_ERROR;
+    {
+      lock_release (&file_lock);
+      return TID_ERROR;
+    }
   file_close (file);
+  lock_release (&file_lock);
     
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (execute_name, PRI_DEFAULT, start_process, fn_copy);
@@ -101,6 +108,31 @@ find_args (char *file_name, int *argc, char *argv[])
       (*argc)++;
       token = strtok_r (NULL, " ", &save_ptr);
     }
+}
+
+/* Create a new waiting_sema for the given TID */
+struct waiting_sema *
+create_waiting_sema (int tid)
+{
+  struct waiting_sema *ret = malloc (sizeof (struct waiting_sema));
+  if (ret == NULL)
+    return NULL;
+  sema_init (&(ret->sema), 0);
+  ret->child_tid = tid;
+  return ret;
+}
+
+/* Find the waiting_sema according to TID in the given LIST */
+struct waiting_sema *
+find_waiting_sema (struct list *list, int tid)
+{
+  for (struct list_elem *e = list_begin (list); 
+       e != list_end (list); e = list_next (e))
+    {
+      if (list_entry (e, struct waiting_sema, elem)->child_tid == tid)
+        return list_entry (e, struct waiting_sema, elem);
+    }
+  return NULL;
 }
 
 /* A thread function that loads a user process and starts it
@@ -174,6 +206,8 @@ int process_wait(tid_t child_tid)
   /* If the thread of the child_tid is not child of current thread, then return -1. */
   if (child_thread == NULL)
   {
+    if (is_exited[child_tid])
+      return exit_status[child_tid];
     return -1;
   }
 
@@ -181,18 +215,18 @@ int process_wait(tid_t child_tid)
   {
     return -1;
   }
-  else
-  {
-    child_thread->is_waited = true;
-  }
+  child_thread->is_waited = true;
 
   /* Block curr_thread if the child process doesn't exit. */
   if (!child_thread->is_exited)
   {
-    curr_thread->is_waiting = true;
-    sema_down (&(curr_thread->waiting_sema));
-    curr_thread->is_waiting = false;
-    return child_thread->exit_status;
+    struct waiting_sema *wait_sema = 
+      create_waiting_sema (child_tid);
+    list_push_back (&(curr_thread->waiting), &(wait_sema->elem));
+    sema_down (&(wait_sema->sema));
+    list_remove (&(wait_sema->elem));
+    free (wait_sema);
+    return exit_status[child_tid];
   }
   else
   {
@@ -205,6 +239,7 @@ void process_exit(void)
 {
   struct thread *cur = thread_current();
   uint32_t *pd;
+  exit_status[cur->tid] = cur->exit_status;
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
@@ -227,7 +262,12 @@ void process_exit(void)
     pagedir_destroy(pd);
     printf("%s: exit(%d)\n", cur->name, cur->exit_status);
     cur->is_exited = true;
-    sema_up (&(cur->parent_thread->waiting_sema));
+    is_exited[cur->tid] = true;
+    struct waiting_sema *w = NULL;
+    w = find_waiting_sema 
+        (&(cur->parent_thread->waiting), cur->tid);
+    if (w != NULL)
+      sema_up (&(w->sema));
     thread_yield();
   }
 }
@@ -343,6 +383,7 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
   process_activate();
 
   /* Open executable file. */
+  lock_acquire (&file_lock);
   file = filesys_open(argv[0]);
   if (file == NULL)
   {
@@ -429,6 +470,7 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
 
 done:
   /* We arrive here whether the load is successful or not. */
+  lock_release (&file_lock);
   return success;
 }
 

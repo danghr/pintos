@@ -91,6 +91,7 @@ thread_init (void)
   ASSERT (intr_get_level () == INTR_OFF);
 
   lock_init (&tid_lock);
+  lock_init (&file_lock);
   list_init (&ready_list);
   list_init (&all_list);
 
@@ -294,7 +295,8 @@ thread_exit (void)
      and schedule another process.  That process will destroy us
      when it calls thread_schedule_tail(). */
   intr_disable ();
-  list_remove (&thread_current()->allelem);
+  list_remove (&thread_current ()->allelem);
+  list_remove (&thread_current ()->child_elem);
   thread_current ()->status = THREAD_DYING;
   schedule ();
   NOT_REACHED ();
@@ -476,11 +478,12 @@ init_thread (struct thread *t, const char *name, int priority)
   t->exit_status = 0;
   list_init (&(t->child_threads_list));
   list_init (&(t->opened_files));
-  sema_init(&(t->waiting_sema), 0);
+  list_init (&(t->waiting));
   t->is_exited = false;
   t->is_waited = false;
   t->is_waiting = false;
   t->executing_file = NULL;
+  t->exit_status = -1;
 }
 
 static void init_thread_child (struct thread* t, struct thread* parent)

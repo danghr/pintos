@@ -14,9 +14,6 @@
 #include "devices/intq.h"
 #include "devices/input.h"
 
-/* Lock of filesys access */
-static struct lock *filesys_lock;
-
 static void syscall_handler (struct intr_frame *);
 
 /* Interrupt handler wrapper functions */
@@ -133,8 +130,6 @@ syscall_init (void)
   syscall_handler_wrapper[SYS_READDIR] = &syscall_readdir_wrapper;
   syscall_handler_wrapper[SYS_ISDIR] = &syscall_isdir_wrapper;
   syscall_handler_wrapper[SYS_INUMBER] = &syscall_inumber_wrapper;
-  filesys_lock = malloc (sizeof (struct lock));
-  lock_init (filesys_lock);
 }
 
 /* Kill the program which is violating the system */
@@ -250,9 +245,9 @@ syscall_wait (pid_t pid)
 bool
 syscall_create (const char *file, unsigned initial_size)
 {
-  lock_acquire (filesys_lock);
+  lock_acquire (&file_lock);
   bool ret = filesys_create (file, initial_size);
-  lock_release (filesys_lock);
+  lock_release (&file_lock);
   return ret;
 }
 
@@ -261,9 +256,9 @@ syscall_create (const char *file, unsigned initial_size)
 bool
 syscall_remove (const char *file)
 {
-  lock_acquire (filesys_lock);
+  lock_acquire (&file_lock);
   bool ret = filesys_remove (file);
-  lock_release (filesys_lock);
+  lock_release (&file_lock);
   return ret;
 }
 
@@ -276,9 +271,9 @@ syscall_open (const char *file)
   struct file *to_open;
   struct fd_entry *opened_file;
 
-  lock_acquire (filesys_lock);
+  lock_acquire (&file_lock);
   to_open = filesys_open (file);
-  lock_release (filesys_lock);
+  lock_release (&file_lock);
 
   /* If the opening process fails, straightly return -1 */
   if(to_open == NULL)
@@ -305,9 +300,9 @@ syscall_filesize (int fd)
   struct fd_entry *fd_e = get_fd_entry (fd);
   if (fd_e == NULL)
     return -1;
-  lock_acquire (filesys_lock);
+  lock_acquire (&file_lock);
   ret = file_length (fd_e->file);
-  lock_release (filesys_lock);
+  lock_release (&file_lock);
   return ret;
 }
 
@@ -335,11 +330,11 @@ syscall_read (int fd, void *buffer, unsigned length)
   int ret;
   if (fd_e == NULL)
     return -1;
-  lock_acquire (filesys_lock);
+  lock_acquire (&file_lock);
   file_deny_write (fd_e->file);
   ret = file_read (fd_e->file, buffer, length);
   file_allow_write (fd_e->file);
-  lock_release (filesys_lock);
+  lock_release (&file_lock);
   return ret;
 }
 
@@ -358,9 +353,9 @@ syscall_write (int fd, const void *buffer, unsigned length)
   int ret;
   if (fd_e == NULL)
     return -1;
-  lock_acquire (filesys_lock);
+  lock_acquire (&file_lock);
   ret = file_write (fd_e->file, buffer, length);
-  lock_release (filesys_lock);
+  lock_release (&file_lock);
   return ret;
 }
 
@@ -373,9 +368,9 @@ syscall_seek (int fd, unsigned position)
   struct fd_entry *fd_e = get_fd_entry (fd);
   if (fd_e == NULL)
     return -1;
-  lock_acquire (filesys_lock);
+  lock_acquire (&file_lock);
   file_seek (fd_e->file, position);
-  lock_release (filesys_lock);
+  lock_release (&file_lock);
   return 0;
 }
 
@@ -389,9 +384,9 @@ syscall_tell (int fd)
   struct fd_entry *fd_e = get_fd_entry (fd);
   if (fd_e == NULL)
     return -1;
-  lock_acquire (filesys_lock);
+  lock_acquire (&file_lock);
   ret = file_tell (fd_e->file);
-  lock_release (filesys_lock);
+  lock_release (&file_lock);
   return ret;
 }
 
@@ -404,9 +399,9 @@ syscall_close (int fd)
   struct fd_entry *fd_e = get_fd_entry (fd);
   if (fd_e == NULL)
     return -1;
-  lock_acquire (filesys_lock);
+  lock_acquire (&file_lock);
   file_close (fd_e->file);
-  lock_release (filesys_lock);
+  lock_release (&file_lock);
 
   list_remove (&(fd_e->elem));
   free (fd_e);
