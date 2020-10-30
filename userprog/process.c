@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <list.h>
 #include "threads/malloc.h"
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
@@ -20,28 +19,10 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "threads/synch.h"
+#include "threads/thread.h"
 
 static thread_func start_process NO_RETURN;
 static bool load(const char *cmdline, void (**eip)(void), void **esp);
-
-/* Return the element in FILE_LIST with given FILENAME
-   Return NULL if not found */
-static struct filename_lock *
-find_executing_file (struct list *file_list, char *filename)
-{
-  for (struct list_elem *e = list_begin (file_list); 
-       e != list_end (file_list); e = list_next (e))
-    {
-      char *current_name = list_entry (e, struct filename_lock, elem)->filename;
-      if (strcmp(current_name, filename) == 0)
-        return list_entry (e, struct filename_lock, elem);
-    }
-  return NULL;
-}
-
-static struct lock load_filesys_lock;
-static struct list executing_executable;
-static bool load_filesys_lock_init = false;
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -50,12 +31,6 @@ static bool load_filesys_lock_init = false;
 tid_t 
 process_execute(const char *file_name)
 {
-  if (!load_filesys_lock_init)
-    {
-      lock_init (&load_filesys_lock);
-      list_init (&executing_executable);
-      load_filesys_lock_init = true;
-    }
   char *fn_copy;
   tid_t tid;
   /* The first words in file name. */
@@ -70,41 +45,10 @@ process_execute(const char *file_name)
   strlcpy(fn_copy, file_name, PGSIZE);
 
   /* Check whether the file exists */
-  struct filename_lock *fl = find_executing_file (&executing_executable, execute_name);
-  if (fl == NULL)
-    {
-      fl = malloc (sizeof (struct filename_lock));
-      fl->filename = execute_name;
-      lock_init (&(fl->lock));
-      list_push_back (&executing_executable, &(fl->elem));
-    }
-  lock_acquire (&(fl->lock));
   struct file *file = filesys_open (execute_name);
-  if (file == NULL) 
-    {
-      if (list_empty(&(fl->lock.semaphore.waiters)))
-        {
-          lock_release (&(fl->lock));
-        }
-      else
-        {
-          lock_release (&(fl->lock));
-          list_remove (&(fl->elem));
-          free (fl);
-        }
-      return TID_ERROR;
-    }
+  if (file == NULL)
+    return TID_ERROR;
   file_close (file);
-  if (list_empty(&(fl->lock.semaphore.waiters)))
-    {
-      lock_release (&(fl->lock));
-    }
-  else
-    {
-      lock_release (&(fl->lock));
-      list_remove (&(fl->elem));
-      free (fl);
-    }
     
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (execute_name, PRI_DEFAULT, start_process, fn_copy);
@@ -170,36 +114,12 @@ start_process(void *file_name_)
   char *execute_name = malloc(15);
   find_exec_name (file_name, execute_name);
 
-  /* Find the executing file */
-  struct filename_lock *fl;
-  fl = find_executing_file (&executing_executable, execute_name);
-  if (fl == NULL)
-    {
-      fl = malloc (sizeof (struct filename_lock));
-      fl->filename = execute_name;
-      lock_init (&(fl->lock));
-      list_push_back (&executing_executable, &(fl->elem));
-    }
-
   /* Initialize interrupt frame and load executable. */
   memset(&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  printf ("  Thread %s trying to acquire lock of %s\n", thread_current()->name, fl->filename);
-  lock_acquire (&(fl->lock));
-  printf ("  Acquired lock of %s by %s\n", fl->filename, thread_current()->name);
   success = load(file_name, &if_.eip, &if_.esp);
-  if (list_empty(&(fl->lock.semaphore.waiters)))
-    {
-      lock_release (&(fl->lock));
-    }
-  else
-    {
-      lock_release (&(fl->lock));
-      list_remove (&(fl->elem));
-      free (fl);
-    }
 
   /* If load failed, quit. */
   palloc_free_page(file_name);
@@ -299,8 +219,9 @@ void process_exit(void)
          directory, or our active page directory will be one
          that's been freed (and cleared). */
     /* Re-allow writes to the executable */
-    if (cur->executing_file != NULL) 
+    if (cur->executing_file != NULL) {
       file_close (cur->executing_file);
+    }
     cur->pagedir = NULL;
     pagedir_activate(NULL);
     pagedir_destroy(pd);
