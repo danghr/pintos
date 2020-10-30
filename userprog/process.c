@@ -263,6 +263,7 @@ void process_exit(void)
     cur->is_exited = true;
     list_remove(&cur->child_elem);
     cur_p->exit_status = cur->exit_status;
+    cur_p->is_exited = true;
     sema_up (&(cur->parent_thread->waiting_sema));
   }
 }
@@ -380,6 +381,7 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
 
   // printf("%s\n", argv[0]);
   /* Open executable file. */
+  lock_acquire (&file_lock);
   file = filesys_open(argv[0]);
   if (file == NULL)
   {
@@ -466,6 +468,7 @@ bool load(const char *file_name, void (**eip)(void), void **esp)
 
 done:
   /* We arrive here whether the load is successful or not. */
+  lock_release (&file_lock);
   return success;
 }
 

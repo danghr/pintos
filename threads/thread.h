@@ -141,6 +141,9 @@ struct thread
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
 
+/* Lock of filesys access */
+struct lock file_lock;
+
 void thread_init (void);
 void thread_start (void);
 
