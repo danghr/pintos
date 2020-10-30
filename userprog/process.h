@@ -3,9 +3,9 @@
 
 #include "threads/thread.h"
 
-#define MAX_CMD_LENGTH 100
+#define MAX_CMD_LENGTH 128
 #define MAX_EXEC_NAME_LENGTH 15
-#define MAX_ARGS 50
+#define MAX_ARGS 64
 
 tid_t process_execute (const char *file_name);
 int process_wait (tid_t);
