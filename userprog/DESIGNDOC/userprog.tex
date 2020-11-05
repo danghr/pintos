@@ -39,7 +39,7 @@
 
     \author{Derun Li}
     \affiliation{%
-        \state{0000000000}
+        \state{2018533152}
     }
     \email{lidr@shanghaitech.edu.cn}
 
@@ -62,7 +62,7 @@
         \subsection{References}
         
             \begin{itemize}
-                \item
+                \item Pintos Guide by Stephen Tsung-Han Sher:  \url{https://static1.squarespace.com/static/5b18aa0955b02c1de94e4412/t/5e1bb4809e4b0a78012be132/1578874001361/Sher\%282016%29_Pintos_Guide}
             \end{itemize} 
     
     \section{Argument Passing}
@@ -71,7 +71,7 @@
     
         \subsection{Data Structures}
         
-            \subsubsection{Copy here the declaration of each new or changed `\texttt{struct}' or `\texttt{struct}' member, global or static variable, `\texttt{typedef}', or enumeration. Identify the purpose of each in 25 words or less. } 
+            \subsubsection{Copy here the declaration of each new or changed `\texttt{struct}' or `\texttt{struct}' member, global or static variable, `\texttt{typedef}', or enumeration. Identify the purpose of each in 25 words or less. }
             
             No modified data structure in this part. 
         
@@ -161,6 +161,12 @@ struct lock file_lock;
 static int (*syscall_handler_wrapper[20]) 
     (struct intr_frame *);
 \end{verbatim}
+                    \item In file \texttt{userprog/process.c}
+\begin{verbatim}
+/* Save exit status of the threads */
+static int exit_status[MAX_THREADS] = {-1};
+static bool is_exited[MAX_THREADS] = {false};
+\end{verbatim}
                 \end{itemize}
 
             \subsubsection{Describe how file descriptors are associated with open files.  Are file descriptors unique within the entire OS or just within a single process? }
@@ -172,26 +178,51 @@ static int (*syscall_handler_wrapper[20])
         \subsection{Algorithms}
 
             \subsubsection{Describe your code for reading and writing user data from the kernel. } 
+            
+            Before accessing the data, we uses a function \texttt{is\_valid\_addr()} which calls \texttt{is\_user\_vaddr()} and \texttt{pagedir\_get\_page()} to validate the user memory before dereferencing the pointers or values. Note that for each validation 4 bytes are needed to validate (and we can validate the front and the back) as they are pointers which save memory addresses. 
+            
+            When reading/writing these data, we dereference these pointers so that the corresponding data can be modified by the kernel. 
 
-            \subsubsection{Suppose a system call causes a full page (4,096 bytes) of data to be copied from user space into the kernel.  What is the least and the greatest possible number of inspections of the page table (e.g. calls to \texttt{pagedir\_get\_page()}) that might result?  What about for a system call that only copies 2 bytes of data?  Is there room for improvement in these numbers, and how much? }
+            \subsubsection{Suppose a system call causes a full page (4,096 bytes) of data to be copied from user space into the kernel.  What is the least and the greatest possible number of inspections of the page table (e.g. calls to \texttt{pagedir\_get\_page()}) that might result?  What about for a system call that only copies 2 bytes of data?  Is there room for improvement in these numbers, and how much?}
+            
+            If the memory is contiguous, and we find the head of the page at the first inspection, then the number is 1. But if the memory is not continuous, the largest number will be 4096. For two bytes, the minimum number is 1, and the maximum number is 2 like above. 
 
             \subsubsection{Briefly describe your implementation of the "\texttt{wait}" system call and how it interacts with process termination. }
+            
+            We implement a \texttt{curr\_child\_list} to store the child process and find the process according to the \texttt{tid}, then we check whether the child process is waiting. If it is waiting then we return -1, otherwise we will push back the \texttt{waiting\_sema} and block the parent thread until it is woke up by \texttt{process\_exit} of its child thread.
+            
+            When a thread is exiting, it will save its \texttt{exit\_status} in the static array and change the \texttt{is\_exited} to \texttt{true}. The \texttt{process\_wait()} will then return the value of \texttt{exit\_status[TID]} to \texttt{syscall\_wait()}, which will save the status in the return value register. 
 
-            \subsubsection{Any access to user program memory at a user-specified address can fail due to a bad pointer value.  Such accesses must cause the process to be terminated.  System calls are fraught with such accesses, e.g. a "\texttt{write}" system call requires reading the system call number from the user stack, then each of the call's three arguments, then an arbitrary amount of user memory, and any of these can fail at any point.  This poses a design and error-handling problem: how do you best avoid obscuring the primary function of code in a morass of error-handling?  Furthermore, when an error is detected, how do you ensure that all temporarily allocated resources (locks, buffers, etc.) are freed?  In a few paragraphs, describe the strategy or strategies you adopted for managing these issues.  Give an example. }
+            \subsubsection{Any access to user program memory at a user-specified address can fail due to a bad pointer value.  Such accesses must cause the process to be terminated.  System calls are fraught with such accesses, e.g. a "\texttt{write}" system call requires reading the system call number from the user stack, then each of the call's three arguments, then an arbitrary amount of user memory, and any of these can fail at any point.  This poses a design and error-handling problem: how do you best avoid obscuring the primary function of code in a morass of error-handling?  Furthermore, when an error is detected, how do you ensure that all temporarily allocated resources (locks, buffers, etc.) are freed?  In a few paragraphs, describe the strategy or strategies you adopted for managing these issues.  Give an example.}
+            
+            We will check the last byte for the corresponding parameter. When we check the string we cannot get the length of the string. So we just check the char one by one until we find the \texttt{EOF} And we will check the pointer stored in the stack which will terminates our program. If there is an error, we will terminates the process and then free the page.
 
         \subsection{Synchronization}
 
             \subsubsection{The "\texttt{exec}" system call returns \texttt{-1} if loading the new executable fails, so it cannot return before the new executable has completed loading.  How does your code ensure this?  How is the load success/failure status passed back to the thread that calls "\texttt{exec}"? }
+            
+            We use a lock to synchronize the loading file part. Every time when we load a file we will acquire the only \texttt{file\_lock} and when finish the load we will release the \texttt{file\_lock}. We use the \texttt{success} to store whether we load the file or not.
 
             \subsubsection{Consider parent process P with child process C.  How do you ensure proper synchronization and avoid race conditions when P calls \texttt{wait(C)} before C exits?  After C exits?  How do you ensure that all resources are freed in each case?  How about when P terminates without waiting, before C exits?  After C exits?  Are there any special cases? }
+            
+            We used two static arrays \texttt{is\_exited} and \texttt{exit\_status} to save the exit status. When a thread exits, it will set its \texttt{is\_exited[TID]} to true and save its exit status to \texttt{exit\_status[TID]}, so we can learn whether the thread is exited. If it is not exited, it works as stated in section 2.2.3; if it is exited, we straightly return the value from \texttt{exit\_status}. 
 
         \subsection{Rationale}
 
             \subsubsection{Why did you choose to implement access to user memory from the kernel in the way that you did? }
+            
+            In this way, dereferencing parameters and executing system calls are separated. Thus, we can validate the memory access before we actually run into system call codes. By the way, such a code is neat and easier to debug. 
 
             \subsubsection{What advantages or disadvantages can you see to your design for file descriptors? }
+            
+            \begin{itemize}
+                \item Advantages: Each file has a unique file descriptor in the whole OS so it avoids most possible collisions. 
+                \item Disadvantages: The opened file is limited during a power cycle, since the maximum value of \texttt{int} is limited and file descriptors are never reallocated. 
+            \end{itemize}
 
             \subsubsection{The default \texttt{tid\_t} to \texttt{pid\_t} mapping is the identity mapping.  If you changed it, what advantages are there to your approach? }
+            
+            We did not change it. 
     
     \section{Survey Questions}
 
@@ -202,10 +233,16 @@ static int (*syscall_handler_wrapper[20])
         % the quarter.
 
         \subsubsection*{In your opinion, was this assignment, or any one of the two problems in it, too easy or too hard? Did it take too long or too little time? }
+        
+        Testcase \texttt{multi-oom} is really confusing. \texttt{backtrace} function of GDB is not easy to use in multi-process projects (like this one). 
 
         \subsubsection*{Did you find that working on a particular part of the assignment gave you greater insight into some aspect of OS design? }
+        
+        Implementing argument passing and dereferencing parameters of system calls offers a insight to how process get and pass their parameters. 
 
         \subsubsection*{Is there some particular fact or hint we should give students in future quarters to help them solve the problems? Conversely, did you find any of our guidance to be misleading? }
+        
+        Not really. 
 
         \subsubsection*{Do you have any suggestions for the TAs to more effectively assist students, either for future quarters or the remaining projects? }
 
