@@ -1,0 +1,194 @@
+% VLDB template version of 2020-03-05 enhances the ACM template, version 1.7.0:
+% https://www.acm.org/publications/proceedings-template
+% The ACM Latex guide provides further information about the ACM template
+
+\documentclass[sigconf, nonacm, balance=false, urlbreakonhyphens=true]{acmart}
+\usepackage{amsmath, amsfonts, amsthm}
+\usepackage{url}
+\usepackage{makecell}
+\usepackage{multirow}
+\usepackage{longtable}
+\usepackage{verbatim}
+\usepackage{hyperref}
+
+% Allow URL Breakline
+\def\UrlBreaks{\do\A\do\B\do\C\do\D\do\E\do\F\do\G\do\H\do\I\do\J
+\do\K\do\L\do\M\do\N\do\O\do\P\do\Q\do\R\do\S\do\T\do\U\do\V
+\do\W\do\X\do\Y\do\Z\do\[\do\\\do\]\do\^\do\_\do\`\do\a\do\b
+\do\c\do\d\do\e\do\f\do\g\do\h\do\i\do\j\do\k\do\l\do\m\do\n
+\do\o\do\p\do\q\do\r\do\s\do\t\do\u\do\v\do\w\do\x\do\y\do\z
+\do\.\do\@\do\\\do\/\do\!\do\_\do\|\do\;\do\>\do\]\do\)\do\,
+\do\?\do\'\do+\do\=\do\#}
+
+\begin{document}
+    \title{CS 130 Project 2: User Programs\\Design Document}
+
+    %%
+    %% The "author" command and its associated commands are used to define the authors and their affiliations.
+    \author{Tianyi Zhang}
+    \affiliation{%
+        \state{2018533074}
+    }
+    \email{zhangty2@shanghaitech.edu.cn}
+
+    \author{Haoran Dang}
+    \affiliation{%
+        \state{2018533259}
+    }
+    \email{danghr@shanghaitech.edu.cn}
+
+    \author{Derun Li}
+    \affiliation{%
+        \state{2018533152}
+    }
+    \email{lidr@shanghaitech.edu.cn}
+
+    \maketitle
+
+    \setcounter{section}{-1}
+
+    \section{Preliminaries}
+        %%
+        %% If you have any preliminary comments on your submission, notes for the
+        %% TAs, or extra credit, please give them here.
+        \subsection{Preliminary Comments}
+
+        No preliminary comment for this project. 
+
+        %%
+        %% Please cite any offline or online sources you consulted while
+        %% preparing your submission, other than the Pintos documentation, course
+        %% text, lecture notes, and course staff.
+        \subsection{References}
+        
+            \begin{itemize}
+                \item Pintos Guide by Stephen Tsung-Han Sher:  \url{https://static1.squarespace.com/static/5b18aa0955b02c1de94e4412/t/5e1bb4809e4b0a78012be132/1578874001361/Sher\%282016%29_Pintos_Guide}
+            \end{itemize} 
+    
+    \section{Page Table Management}
+            
+        \label{Page Table Management}
+    
+        \subsection{Data Structures}
+        
+            \subsubsection{Copy here the declaration of each new or changed `\texttt{struct}' or `\texttt{struct}' member, global or static variable, `\texttt{typedef}', or enumeration. Identify the purpose of each in 25 words or less. }
+        
+        \subsection{Algorithms}
+        
+            \subsubsection{In a few paragraphs, describe your code for accessing the data stored in the SPT about a given page. }
+
+            \subsubsection{How does your code coordinate accessed and dirty bits between kernel and user virtual addresses that alias a single frame, or alternatively how do you avoid the issue? }
+        
+        \subsection{Synchronization}
+
+            \subsubsection{When two user processes both need a new frame at the same time, how are races avoided? }
+        
+        \subsection{Rationale}
+            
+            \subsubsection{Why did you choose the data structure(s) that you did for representing virtual-to-physical mappings? } 
+    
+    \section{Paging to and From Disk}
+
+        \label{Paging to and From Disk}
+
+        \subsection{Data Structures}
+            
+            \subsubsection{Copy here the declaration of each new or changed `\texttt{struct}' or `\texttt{struct}' member, global or static variable, `\texttt{typedef}', or enumeration. Identify the purpose of each in 25 words or less. } 
+
+        \subsection{Algorithms}
+
+            \subsubsection{When a frame is required but none is free, some frame must be evicted.  Describe your code for choosing a frame to evict. } 
+
+            \subsubsection{When a process P obtains a frame that was previously used by a process Q, how do you adjust the page table (and any other data structures) to reflect the frame Q no longer has? }
+
+            \subsubsection{Explain your heuristic for deciding whether a page fault for an invalid virtual address should cause the stack to be extended into the page that faulted. }
+        
+        \subsection{Synchronization}
+
+            \subsubsection{Explain the basics of your VM synchronization design.  In particular, explain how it prevents deadlock.  (Refer to the textbook for an explanation of the necessary conditions for deadlock.) }
+
+            \subsubsection{A page fault in process P can cause another process Q's frame to be evicted.  How do you ensure that Q cannot access or modify the page during the eviction process?  How do you avoid a race between P evicting Q's frame and Q faulting the page back in? }
+
+            \subsubsection{Suppose a page fault in process P causes a page to be read from the file system or swap.  How do you ensure that a second process Q cannot interfere by e.g. attempting to evict the frame while it is still being read in? }
+
+            \subsubsection{Explain how you handle access to paged-out pages that occur during system calls.  Do you use page faults to bring in pages (as in user programs), or do you have a mechanism for `locking' frames into physical memory, or do you use some other design?  How do you gracefully handle attempted accesses to invalid virtual addresses? }
+        
+        \subsubsection{Rationale}
+
+            \subsubsection{A single lock for the whole VM system would make synchronization easy, but limit parallelism.  On the other hand, using many locks complicates synchronization and raises the possibility for deadlock but allows for high parallelism.  Explain where your design falls along this continuum and why you chose to design it this way. }
+    
+    \section{Memory Mapped Files}
+
+        \label{Memory Mapped Files}
+
+        \subsection{Data Structures}
+            
+            \subsubsection{Copy here the declaration of each new or changed `\texttt{struct}' or `\texttt{struct}' member, global or static variable, `\texttt{typedef}', or enumeration. Identify the purpose of each in 25 words or less. } 
+
+        \subsection{Algorithms}
+
+            \subsubsection{Describe how memory mapped files integrate into your virtual memory subsystem.  Explain how the page fault and eviction processes differ between swap pages and other pages. } 
+
+            \subsubsection{Explain how you determine whether a new file mapping overlaps any existing segment. }
+        
+        \subsection{Rationale}
+
+            \subsubsection{Mappings created with `\texttt{mmap}' have similar semantics to those of data demand-paged from executables, except that `\texttt{mmap}' mappings are written back to their original files, not to swap.  This implies that much of their implementation can be shared.  Explain why your implementation either does or does not share much of the code for the two situations. }
+
+    \section{Survey Questions}
+
+        % Answering these questions is optional, but it will help us improve the
+        % course in future quarters.  Feel free to tell us anything you
+        % want--these questions are just to spur your thoughts.  You may also
+        % choose to respond anonymously in the course evaluations at the end of
+        % the quarter.
+
+        \subsubsection*{In your opinion, was this assignment, or any one of the two problems in it, too easy or too hard? Did it take too long or too little time? }
+
+        \subsubsection*{Did you find that working on a particular part of the assignment gave you greater insight into some aspect of OS design? }
+
+        \subsubsection*{Is there some particular fact or hint we should give students in future quarters to help them solve the problems? Conversely, did you find any of our guidance to be misleading? }
+
+        \subsubsection*{Do you have any suggestions for the TAs to more effectively assist students, either for future quarters or the remaining projects? }
+
+        \subsubsection*{Any other comments? }
+    
+    \section*{Contributors}
+
+        \begin{center}
+            \begin{tabular}{|c|c|c|c|c|}
+                \hline
+                \multicolumn{2}{|c|}{Task} & \makecell{Tianyi\\Zhang} & \makecell{Haoran\\Dang} & \makecell{Derun\\Li} \\
+                \hline
+                \multirow{4}{*}{\makecell{Task 1 \\ Page Table \\ Management}} 
+                    & Concept & \checkmark & \checkmark & \checkmark \\
+                    \cline{2-5}
+                    & Implementation & \checkmark & \checkmark & \checkmark \\
+                    \cline{2-5}
+                    & Debugging & \checkmark & \checkmark & \checkmark \\
+                    \cline{2-5}
+                    & Design Document & \checkmark & \checkmark & \checkmark \\
+                \hline
+                \multirow{4}{*}{\makecell{Task 2 \\ Paging to \\ and From Disk}} 
+                    & Concept & \checkmark & \checkmark & \checkmark \\
+                    \cline{2-5}
+                    & Implementation & \checkmark & \checkmark & \checkmark \\
+                    \cline{2-5}
+                    & Debugging & \checkmark & \checkmark & \checkmark \\
+                    \cline{2-5}
+                    & Design Document & \checkmark & \checkmark & \checkmark \\
+                \hline
+                \multirow{4}{*}{\makecell{Task 3 \\ Memory \\ Mapped Files}} 
+                    & Concept & \checkmark & \checkmark & \checkmark \\
+                    \cline{2-5}
+                    & Implementation & \checkmark & \checkmark & \checkmark \\
+                    \cline{2-5}
+                    & Debugging & \checkmark & \checkmark & \checkmark \\
+                    \cline{2-5}
+                    & Design Document & \checkmark & \checkmark & \checkmark \\
+                \hline
+            \end{tabular}
+        \end{center}
+
+\end{document}
+\endinput
