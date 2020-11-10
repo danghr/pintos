@@ -622,8 +622,11 @@ setup_stack (void **esp, char **argv, int argc)
           }
         
         /* Pushing the word-align */
-        *esp -= 4;
-        * (int*) (*esp) = 0;
+        while((int)(*esp) % 4 != 0)
+          {
+            *esp -= 1;
+            * (uint8_t*) *esp = (uint8_t)0;
+          }
         
         /* Pushing address of each parameter string */
         *esp -= 4;
