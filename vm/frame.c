@@ -5,11 +5,11 @@
 #include "threads/malloc.h"
 #include "threads/palloc.h"
 
-/* List of all frame tables */
+static bool page_table_initialized = false;
 static struct lock frame_table_lock;
 
 /* Push frame table FTE to frame_table_list */
-static void *
+static void
 push_frame_table_to_list (struct frame_table_entry *fte)
 {
   ASSERT (!in_list (&(fte->elem), &frame_table));
@@ -20,16 +20,33 @@ push_frame_table_to_list (struct frame_table_entry *fte)
   lock_release (&frame_table_lock);
 }
 
-/* Initialize the frame table */
+/* Find the corresponding frame table according to the given PAGE. 
+   Return NULL if not found. */
+struct frame_table_entry *
+find_frame_table_entry (void *page)
+{
+  for (struct list_elem *e = list_begin (&frame_table);
+       e != list_end (&frame_table); e = list_next (e))
+    {
+      if (list_entry (e, struct frame_table_entry, elem)->page == page)
+        return list_entry (e, struct frame_table_entry, elem);
+    }
+  return NULL;
+}
+
+/* Initialize the frame table. */
 void
 frame_table_init ()
 {
+  if (page_table_initialized)
+    return ;
+  page_table_initialized = true;
   list_init (&frame_table);
   lock_init (&frame_table_lock);
 }
 
-/* Allocate a frame table according to given FLAGS
-   Return the address of the allocated page, or NULL if fails */
+/* Allocate a frame table according to given FLAGS.
+   Return the address of the allocated page, or NULL if fails. */
 void *
 frame_allocate_page (enum palloc_flags flags)
 {
@@ -47,14 +64,15 @@ frame_allocate_page (enum palloc_flags flags)
       push_frame_table_to_list (fte);
       return page;
     }
-  /* Need to implement evicting a page according to LRU from the current 
-     memory and reallocate the page */
+  /* Need to implement evicting a page according to LRU from 
+     the current memory and reallocate the page. */
   return NULL;
 }
 
-/* Free the given frame table entry FTE and the corresponding page table */
+/* Free the given frame table entry FTE and the corresponding 
+   page table. */
 void
-frame_free_page (struct frame_table_entry *fte)
+frame_free_fte (struct frame_table_entry *fte)
 {
   if (!lock_held_by_current_thread (&frame_table_lock))
     lock_acquire (&frame_table_lock);
@@ -63,4 +81,11 @@ frame_free_page (struct frame_table_entry *fte)
 
   palloc_free_page (fte->page);
   free (fte);
+}
+
+/* Free the given frame table entry according to the given PAGE */
+void
+frame_free_page (void *page)
+{
+  frame_free_fte (find_frame_table_entry (page));
 }

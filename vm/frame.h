@@ -1,11 +1,10 @@
-#ifndef FRAME_H
-#define FRAME_H
+#ifndef VM_FRAME_H
+#define VM_FRAME_H
 
 #include <list.h>
 #include "threads/synch.h"
 #include "threads/palloc.h"
 
-/* List of all frames */
 struct list frame_table;
 
 struct frame_table_entry
@@ -15,7 +14,10 @@ struct frame_table_entry
   struct list_elem elem;    /* List element */
 };
 
-void frame_table_init ();
+struct frame_table_entry *find_frame_table_entry (void *);
+
+void frame_table_init (void);
 void *frame_allocate_page (enum palloc_flags);
-void frame_free_page (struct frame_table_entry *);
-#endif /* vm/frame.h */
+void frame_free_fte (struct frame_table_entry *);
+void frame_free_page (void *);
+#endif /* userprog/frame.h */
