@@ -17,4 +17,5 @@ struct frame_table_entry
 
 void frame_table_init ();
 void *frame_allocate_page (enum palloc_flags);
+void frame_free_page (struct frame_table_entry *);
 #endif /* vm/frame.h */

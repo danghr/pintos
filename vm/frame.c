@@ -51,3 +51,16 @@ frame_allocate_page (enum palloc_flags flags)
      memory and reallocate the page */
   return NULL;
 }
+
+/* Free the given frame table entry FTE and the corresponding page table */
+void
+frame_free_page (struct frame_table_entry *fte)
+{
+  if (!lock_held_by_current_thread (&frame_table_lock))
+    lock_acquire (&frame_table_lock);
+  list_remove (&(fte->elem));
+  lock_release (&frame_table_lock);
+
+  palloc_free_page (fte->page);
+  free (fte);
+}
