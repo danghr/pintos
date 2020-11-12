@@ -9,15 +9,15 @@ struct list frame_table;
 
 struct frame_table_entry
 {
-  void *page;               /* Address of the page */
+  void *frame;               /* Address of the page */
   struct thread *owner;     /* Owner thread/process of the page */
   struct list_elem elem;    /* List element */
 };
 
-struct frame_table_entry *find_frame_table_entry (void *);
+struct frame_table_entry *frame_find_entry (void *);
 
 void frame_table_init (void);
-void *frame_allocate_page (enum palloc_flags);
+void *frame_allocate (enum palloc_flags);
 void frame_free_fte (struct frame_table_entry *);
-void frame_free_page (void *);
+void frame_free (void *);
 #endif /* userprog/frame.h */
