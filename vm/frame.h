@@ -9,6 +9,7 @@
 /* List of all frame tables allocated here */
 struct list frame_table;
 
+/* Entries of frame table */
 struct frame_table_entry
 {
   /* Entry of the supplemental page table */

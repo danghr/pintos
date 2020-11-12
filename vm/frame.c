@@ -6,7 +6,9 @@
 #include "threads/malloc.h"
 #include "threads/palloc.h"
 
+/* Page initialition flag */
 static bool page_table_initialized = false;
+/* Lock of frame table */
 static struct lock frame_table_lock;
 
 /* Push frame table FTE to frame_table */

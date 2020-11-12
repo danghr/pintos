@@ -6,6 +6,7 @@
 #include "threads/synch.h"
 #include "threads/palloc.h"
 
+/* Entries of supplemental page table */
 struct sup_page_table_entry
 {
   void *page;               /* User virtual address of the page */
