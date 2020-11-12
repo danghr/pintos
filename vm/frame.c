@@ -48,7 +48,7 @@ frame_table_init ()
 /* Allocate a frame table according to given FLAGS.
    Return the address of the allocated page, or NULL if fails. */
 void *
-frame_allocate (enum palloc_flags flags)
+frame_allocate_page (enum palloc_flags flags)
 {
   /* Try to allocate a page */
   uint8_t *frame = palloc_get_page (flags);
@@ -85,7 +85,7 @@ frame_free_fte (struct frame_table_entry *fte)
 
 /* Free the given frame table entry according to the given PAGE */
 void
-frame_free (void *page)
+frame_free_page (void *page)
 {
   frame_free_fte (frame_find_entry (page));
 }
