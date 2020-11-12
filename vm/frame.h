@@ -5,11 +5,12 @@
 #include "threads/synch.h"
 #include "threads/palloc.h"
 
+/* List of all frame tables allocated here */
 struct list frame_table;
 
 struct frame_table_entry
 {
-  void *frame;               /* Address of the page */
+  void *frame;              /* Address of the page */
   struct thread *owner;     /* Owner thread/process of the page */
   struct list_elem elem;    /* List element */
 };
