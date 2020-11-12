@@ -50,6 +50,13 @@ frame_table_init ()
 void *
 frame_allocate_page (enum palloc_flags flags)
 {
+  /* This function should ONLY be used to allocate frames from user pool 
+     Refer to 4.1.5 (Really? ) */
+  ASSERT (flags == PAL_USER || 
+          flags == (PAL_ZERO | PAL_USER) ||
+          flags == (PAL_ASSERT | PAL_USER) ||
+          flags == (PAL_ZERO | PAL_ASSERT | PAL_USER));
+  
   /* Try to allocate a page */
   uint8_t *frame = palloc_get_page (flags);
 
