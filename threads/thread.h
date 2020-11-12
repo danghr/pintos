@@ -144,6 +144,9 @@ struct thread
     bool is_waited;
     bool is_waiting;
     struct thread* parent_thread;
+
+    /* List used to store supplemental page tables */
+    struct list sup_page_table;
   };
 
 /* If false (default), use round-robin scheduler.

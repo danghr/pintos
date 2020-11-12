@@ -11,12 +11,13 @@ struct list frame_table;
 
 struct frame_table_entry
 {
-  void *frame;              /* Address of the page */
+  /* Entry of the supplemental page table */
+  struct sup_page_table_entry *spte;
   struct thread *owner;     /* Owner thread/process of the page */
   struct list_elem elem;    /* List element */
 };
 
-struct frame_table_entry *frame_find_entry (void *);
+struct frame_table_entry *frame_find_entry (struct sup_page_table_entry *);
 
 void frame_table_init (void);
 void *frame_allocate_page (enum palloc_flags);
