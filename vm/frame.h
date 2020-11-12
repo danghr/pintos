@@ -4,6 +4,7 @@
 #include <list.h>
 #include "threads/synch.h"
 #include "threads/palloc.h"
+#include "vm/page.h"
 
 /* List of all frame tables allocated here */
 struct list frame_table;

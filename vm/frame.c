@@ -8,7 +8,7 @@
 static bool page_table_initialized = false;
 static struct lock frame_table_lock;
 
-/* Push frame table FTE to frame_table_list */
+/* Push frame table FTE to frame_table */
 static void
 frame_push_to_table (struct frame_table_entry *fte)
 {
