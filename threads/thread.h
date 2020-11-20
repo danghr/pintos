@@ -108,7 +108,7 @@ struct thread
                                            list. */
     int64_t sleeping_ticks;             /* A counter of remaining sleeping 
                                            ticks. */
-   
+    void* curr_esp;
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
@@ -202,3 +202,4 @@ void sort_ready_list(void);
 void round_robin(void);
 
 #endif /* threads/thread.h */
+exception

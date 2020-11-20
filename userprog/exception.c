@@ -5,7 +5,10 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "userprog/syscall.h"
+#include "threads/vaddr.h"
+#include "vm/page.h"
 /* Number of page faults processed. */
+#define STACK_SIZE 0X800000
 static long long page_fault_cnt;
 
 static void kill (struct intr_frame *);
@@ -117,7 +120,7 @@ kill (struct intr_frame *f)
    the PF_* macros in exception.h, is in F's error_code member.  The
    example code here shows how to parse that information.  You
    can find more information about both of these in the
-   description of "Interrupt 14--Page Fault Exception (#PF)" in
+   description of "Interrupt 14--Page FaPHYS_ult Exception (#PF)" in
    [IA32-v3a] section 5.15 "Exception and Interrupt Reference". */
 static void
 page_fault (struct intr_frame *f) 
@@ -147,6 +150,43 @@ page_fault (struct intr_frame *f)
   not_present = (f->error_code & PF_P) == 0;
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
+  struct thread *curr_thread = thread_current();
+  void* page_boudary = (void *) pg_round_down(fault_addr);
+  if(! not_present){
+     if(!user){
+        f->eip = (void*) f->eax;
+        f->eax = 0xffffffff;
+        return;
+      }
+     else{
+        kill(f);
+      }
+   }
+   
+   void* esp = user ? f->esp : curr_thread->curr_esp;
+   bool on_stack, in_frame;
+   on_stack = fault_addr >= PHYS_BASE - STACK_SIZE && fault_addr < PHYS_BASE;
+   in_frame = esp <= fault_addr || fault_addr == f->esp - 4 || fault_addr == f->esp -32;
+
+   if(on_stack && in_frame){
+      if(sup_page_find_entry (curr_thread, page_boudary) == NULL)
+      {
+         sup_install_zero_page(curr_thread,page_boudary);
+      }
+   }
+   if(!load_page(curr_thread,page_boudary))
+   {
+      if(!user){
+         f->eip = (void*) f->eax;
+         f->eax = 0xffffffff;
+         return;
+      }
+      else{
+         kill(f);
+      }
+              
+   }
+   return;
 
   /* To implement virtual memory, delete the rest of the function
      body, and replace it with code that brings in the page to

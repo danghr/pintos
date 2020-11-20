@@ -15,12 +15,19 @@ struct sup_page_table_entry
   bool accessed;
   struct thread *owner;     /* Owner thread/process of the page */
   struct list_elem elem;
+  enum state status;
 };
-
+enum state{
+  ALL_ZERO = 0,
+  ON_FRAME = 1,
+  IN_SWAP = 2
+};
 struct sup_page_table_entry *sup_page_find_entry (struct thread *, void *);
 
 struct sup_page_table_entry *sup_page_allocate_page 
   (struct thread *, enum palloc_flags);
 void sup_page_free_spte (struct sup_page_table_entry *);
 void sup_page_free_page (struct thread *, void *);
+bool sup_install_zero_page(struct thread *curr_thread,void *vaddr);
+
 #endif /* vm/page.h */

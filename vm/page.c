@@ -8,7 +8,7 @@
 
 /* Push the page table SPTE to the sup_page_table in the givne thread T */
 static void
-frame_push_to_table (struct thread *t, struct sup_page_table_entry *spte)
+sup_push_to_table (struct thread *t, struct sup_page_table_entry *spte)
 {
   ASSERT (!in_list (&(spte->elem), &t->sup_page_table));
 
@@ -57,7 +57,7 @@ sup_page_allocate_page (struct thread *t, enum palloc_flags flags)
       spte->dirty = false;      /* Should it? */
       spte->accessed = false;   /* Should it? */
       spte->access_time = timer_ticks ();
-      frame_push_to_table (t, spte);
+      p_push_to_table (t, spte);
       return spte;
     }
   /* Need to implement evicting a frame according to LRU from 
@@ -81,3 +81,23 @@ void sup_page_free_page (struct thread *t, void *vaddr)
 {
   sup_page_free_spte (sup_page_find_entry (t, vaddr));
 }
+
+bool 
+sup_install_zero_page(struct thread *curr_thread,void *vaddr)
+{
+  struct sup_page_table_entry *spte;
+  spte = (struct sup_page_table_entry *) malloc(sizeof(struct sup_page_table_entry);
+  if(spte == NULL)
+    return false;
+  spte->page = vaddr;
+  spte->owner = curr_thread;
+  spte->dirty = false;
+  spte->accessed = false;
+  /* Set the time 1 for debug*/
+  spte->access_time = 1; 
+  spte->status = ALL_ZERO;
+  sup_push_to_table(curr_thread,spte);
+  return true;
+}
+bool
+load_page(struct thread *t,)

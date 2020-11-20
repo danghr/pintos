@@ -163,6 +163,7 @@ syscall_handler (struct intr_frame *f)
   
   /* System call number is saved in stack pointer (f->esp).
      See section 3.5.2 in the doc for details. */
+  thread_current()->curr_esp = f->esp;
   int syscall_num = *(int*)(f->esp);
   int wrapper_return;
   /* Check whether correct syscall num is correct */
