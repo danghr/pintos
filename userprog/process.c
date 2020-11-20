@@ -562,14 +562,14 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
     size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
     /* Get a page of memory. */
-    uint8_t *kpage = frame_allocate_page (PAL_USER);
+    uint8_t *kpage = sup_page_allocate_page (PAL_USER);
     if (kpage == NULL)
       return false;
 
     /* Load this page. */
     if (file_read (file, kpage, page_read_bytes) != (int)page_read_bytes)
     {
-      frame_free_page (kpage);
+      sup_page_free_page_frame (kpage);
       return false;
     }
     memset(kpage + page_read_bytes, 0, page_zero_bytes);
@@ -577,7 +577,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
     /* Add the page to the process's address space. */
     if (!install_page (upage, kpage, writable))
     {
-      frame_free_page (kpage);
+      sup_page_free_page_frame (kpage);
       return false;
     }
 
@@ -602,7 +602,7 @@ setup_stack (void **esp, char **argv, int argc)
 
   /* Try to get a page from user pool and let it be a zeroed 
      page. --ZTY*/
-  kpage = frame_allocate_page (PAL_USER | PAL_ZERO); 
+  kpage = sup_page_allocate_page (PAL_USER | PAL_ZERO); 
   if (kpage != NULL)
   {
     success = install_page (((uint8_t *)PHYS_BASE) - PGSIZE, kpage, true);
@@ -650,7 +650,7 @@ setup_stack (void **esp, char **argv, int argc)
         * (int*) (*esp) = 0;
       }
     else
-      frame_free_page (kpage);
+      sup_page_free_page_frame (kpage);
   }
   return success;
 }

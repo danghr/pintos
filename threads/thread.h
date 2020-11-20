@@ -202,4 +202,3 @@ void sort_ready_list(void);
 void round_robin(void);
 
 #endif /* threads/thread.h */
-exception
