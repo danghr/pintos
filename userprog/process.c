@@ -562,10 +562,10 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
     size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
     /* Get a page of memory. */
-    uint8_t *kpage = sup_page_allocate_page (PAL_USER);
-    if (kpage == NULL)
+    struct sup_page_table_entry* spte = sup_page_allocate_page (PAL_USER);
+    if (spte == NULL)
       return false;
-
+    uint8_t *kpage = spte->fte->frame;
     /* Load this page. */
     if (file_read (file, kpage, page_read_bytes) != (int)page_read_bytes)
     {
@@ -597,12 +597,14 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 static bool
 setup_stack (void **esp, char **argv, int argc)
 {
-  uint8_t *kpage;
   bool success = false;
 
   /* Try to get a page from user pool and let it be a zeroed 
      page. --ZTY*/
-  kpage = sup_page_allocate_page (PAL_USER | PAL_ZERO); 
+  struct sup_page_table_entry* spte = sup_page_allocate_page (PAL_USER);
+  if (spte == NULL)
+    return false;
+  uint8_t *kpage = spte->fte->frame;
   if (kpage != NULL)
   {
     success = install_page (((uint8_t *)PHYS_BASE) - PGSIZE, kpage, true);

@@ -174,20 +174,11 @@ page_fault (struct intr_frame *f)
       if (sup_page_find_entry_uaddr (page_boudary) == NULL)
         {
           if (!sup_page_install_zero_page (page_boudary))
-            kill (f);
+           { printf("::::::::");
+            kill (f);}
         }
     }
-  if (!load_page (page_boudary))
-    {
-      if (!user)
-        {
-          f->eip = (void*) f->eax;
-          f->eax = 0xffffffff;
-          return;
-        }
-      else
-        kill (f);        
-    }
+  
    return;
 
   /* To implement virtual memory, delete the rest of the function

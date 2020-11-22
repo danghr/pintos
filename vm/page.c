@@ -5,6 +5,7 @@
 #include "threads/thread.h"
 #include "threads/malloc.h"
 #include "threads/palloc.h"
+#include "threads/vaddr.h"
 
 /* Push the page table SPTE to the sup_page_table in current thread */
 static void
@@ -52,7 +53,7 @@ sup_page_find_entry_frame (void *frame)
 
 /* Allocate a page table according to given FLAGS in current thread. 
    Return the address of the allocated page, or NULL if fails. */
-void *
+struct sup_page_table_entry *
 sup_page_allocate_page (enum palloc_flags flags)
 {
   /* This function should ONLY be used to allocate frames from user pool 
@@ -66,7 +67,8 @@ sup_page_allocate_page (enum palloc_flags flags)
 
   /* Try to allocate a page */
   struct frame_table_entry *fte = frame_allocate_page (t, flags);
-
+  if(fte == NULL)
+    printf("Leader run");
   /* If allocate success */
   if (fte != NULL)
     {
@@ -91,7 +93,7 @@ sup_page_allocate_page (enum palloc_flags flags)
           spte->status = ALL_ZERO;
         }
       sup_push_to_table (spte);
-      return spte->fte->frame;
+      return spte;
     }
   
   /* Eviction is handled in frame allocation, so if that returns NULL,
@@ -130,18 +132,43 @@ sup_page_free_page_frame (void *frame)
 bool 
 sup_page_install_zero_page (void *vaddr)
 {
-  struct sup_page_table_entry *spte = 
-    sup_page_allocate_page (PAL_USER | PAL_ZERO);
+  struct sup_page_table_entry *spte= sup_page_allocate_page ((PAL_ZERO | PAL_USER));
   if(spte == NULL)
-    return false;
+  { printf("NULLLLLLL");
+    return false;}
+
   spte->user_vaddr = vaddr;
-  /* Manually set the time 1 for debug */
-  spte->access_time = 1; 
-  return true;
+  spte->status = ALL_ZERO;
+  return load_page(spte);
 }
 
 bool
-load_page (void *vaddr UNUSED)
+load_page (struct sup_page_table_entry* spte)
 {
-  return false; /* Do nothing */
+  if(spte == NULL) {
+    return false;
+  }
+  if(spte->status == ON_FRAME) {
+    // already loaded
+    return true;
+  }
+
+  void* frame = spte->fte->frame;
+
+  switch(spte->status)
+  {
+    case ALL_ZERO:
+      memset(frame, 0, PGSIZE);
+      break;
+    
+    case ON_FRAME:
+      break;
+    
+    case IN_SWAP:
+      break;
+  }
+
+  spte->status = ON_FRAME;
+
+  return true; /* Do nothing */
 }

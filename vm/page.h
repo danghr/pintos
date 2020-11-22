@@ -35,12 +35,12 @@ struct sup_page_table_entry
 struct sup_page_table_entry *sup_page_find_entry_uaddr (void *);
 struct sup_page_table_entry *sup_page_find_entry_frame (void *);
 
-void *sup_page_allocate_page (enum palloc_flags);
+struct sup_page_table_entry *sup_page_allocate_page (enum palloc_flags);
 void sup_page_free_spte (struct sup_page_table_entry *);
 void sup_page_free_page_uaddr (void *);
 void sup_page_free_page_frame (void *);
 
 bool sup_page_install_zero_page (void *);
-bool load_page (void *);
+bool load_page (struct sup_page_table_entry*);
 
 #endif /* vm/page.h */

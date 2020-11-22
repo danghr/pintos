@@ -61,8 +61,7 @@ frame_allocate_page (struct thread *t, enum palloc_flags flags)
           flags == (PAL_ZERO | PAL_ASSERT | PAL_USER));
   
   /* Try to allocate a page */
-  void *f = palloc_get_page (flags);
-
+  void *f = palloc_get_page ((PAL_ZERO | PAL_USER));
   /* If allocate success */
   if (f != NULL)
     {
