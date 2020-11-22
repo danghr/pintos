@@ -6,7 +6,8 @@
 #include "threads/malloc.h"
 #include "threads/palloc.h"
 #include "threads/vaddr.h"
-
+#include "userprog/pagedir.h"
+#include "vm/swap.h"
 /* Push the page table SPTE to the sup_page_table in current thread */
 static void
 sup_push_to_table (struct sup_page_table_entry *spte)
@@ -67,8 +68,7 @@ sup_page_allocate_page (enum palloc_flags flags)
 
   /* Try to allocate a page */
   struct frame_table_entry *fte = frame_allocate_page (t, flags);
-  if(fte == NULL)
-    printf("Leader run");
+
   /* If allocate success */
   if (fte != NULL)
     {
@@ -132,19 +132,21 @@ sup_page_free_page_frame (void *frame)
 bool 
 sup_page_install_zero_page (void *vaddr)
 {
-  struct sup_page_table_entry *spte= sup_page_allocate_page ((PAL_ZERO | PAL_USER));
+  struct sup_page_table_entry *spte = sup_page_allocate_page ((PAL_ZERO | PAL_USER));
   if(spte == NULL)
-  { printf("NULLLLLLL");
-    return false;}
+    return false;
 
   spte->user_vaddr = vaddr;
   spte->status = ALL_ZERO;
-  return load_page(spte);
+  return true;
 }
 
 bool
-load_page (struct sup_page_table_entry* spte)
+load_page (struct thread *curr, void* vaddr)
 {
+  struct sup_page_table_entry* spte = sup_page_find_entry_uaddr(vaddr);
+  uint32_t *pagedir = curr->pagedir;
+  bool writable = true;
   if(spte == NULL) {
     return false;
   }
@@ -165,10 +167,10 @@ load_page (struct sup_page_table_entry* spte)
       break;
     
     case IN_SWAP:
+      read_from_swap(spte->swap_index,frame);
       break;
   }
-
+  pagedir_set_page(pagedir,vaddr,frame,writable);
   spte->status = ON_FRAME;
-
   return true; /* Do nothing */
 }

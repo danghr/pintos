@@ -48,6 +48,18 @@ frame_table_init ()
   lock_init (&frame_table_lock);
 }
 
+/* When the memory is full, we need to implement the eviction. */
+struct frame_table_entry *
+find_entry_to_evict()
+{
+    for (struct list_elem *e = list_begin (&frame_table);
+       e != list_end (&frame_table); e = list_next (e))
+    {
+      if (list_entry (e, struct frame_table_entry, elem))
+        return list_entry (e, struct frame_table_entry, elem);
+    }
+}
+
 /* Allocate a frame table according to given FLAGS.
    Return the frame table entry of the allocated page, or NULL if fails. */
 struct frame_table_entry *
@@ -62,6 +74,7 @@ frame_allocate_page (struct thread *t, enum palloc_flags flags)
   
   /* Try to allocate a page */
   void *f = palloc_get_page ((PAL_ZERO | PAL_USER));
+
   /* If allocate success */
   if (f != NULL)
     {

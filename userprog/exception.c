@@ -160,8 +160,15 @@ page_fault (struct intr_frame *f)
           f->eax = 0xffffffff;
           return;
         }
-        else
+        else{
+          printf ("Page fault at %p: %s error %s page in %s context.\n",
+          fault_addr,
+          not_present ? "not present" : "rights violation",
+          write ? "writing" : "reading",
+          user ? "user" : "kernel");
           kill(f);
+      }
+          
     }
    
   void* esp = user ? f->esp : curr_thread->curr_esp;
@@ -170,15 +177,29 @@ page_fault (struct intr_frame *f)
   in_frame = esp <= fault_addr || fault_addr == f->esp - 4 || fault_addr == f->esp -32;
 
   if (on_stack && in_frame)
-    {
-      if (sup_page_find_entry_uaddr (page_boudary) == NULL)
-        {
-          if (!sup_page_install_zero_page (page_boudary))
-           { printf("::::::::");
-            kill (f);}
-        }
+  {
+    if (sup_page_find_entry_uaddr (page_boudary) == NULL)
+      sup_page_install_zero_page(page_boudary);
+  }
+  if(!load_page(curr_thread,page_boudary))
+  {
+    if(!user) 
+    { // kernel mode
+      f->eip = (void *) f->eax;
+      f->eax = 0xffffffff;
+      return;
     }
-  
+    else
+    {
+      printf ("Page fault at %p: %s error %s page in %s context.\n",
+      fault_addr,
+      not_present ? "not present" : "rights violation",
+      write ? "writing" : "reading",
+      user ? "user" : "kernel");
+      kill (f);
+    }
+
+  }
    return;
 
   /* To implement virtual memory, delete the rest of the function

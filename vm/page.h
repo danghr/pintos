@@ -28,7 +28,7 @@ struct sup_page_table_entry
   uint64_t access_time;     /* Record the last access time for LRU */
   bool dirty;
   bool accessed;
-  
+  size_t swap_index;
   struct list_elem elem;
 };
 
@@ -41,6 +41,6 @@ void sup_page_free_page_uaddr (void *);
 void sup_page_free_page_frame (void *);
 
 bool sup_page_install_zero_page (void *);
-bool load_page (struct sup_page_table_entry*);
+bool load_page (struct thread *curr, void* vaddr);
 
 #endif /* vm/page.h */
