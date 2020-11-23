@@ -125,7 +125,7 @@ allocate_mapid (void)
 /* Get the entry point in current thread according to mapid
    Returns the address of the fd_entry if found, 
    NULL if not found */
-static struct fd_entry *
+static struct mapid_entry *
 get_mapid_entry (mapid_t mapid)
 {
   struct list *mapid_list = &(thread_current ()->opened_files);
@@ -448,7 +448,7 @@ syscall_close (int fd)
    at ADDR. 
    Return the mapid if succeeds, or -1 if fails. */
 mapid_t 
-syscall_mmap (int fd, void *addr)
+syscall_mmap (int fd UNUSED, void *addr UNUSED)
 {
   return -1;
 }
@@ -458,7 +458,7 @@ syscall_mmap (int fd, void *addr)
    yet been unmapped. 
    To let the wrapper detect success/failure, return -1 if fails and 0
    otherwise. */
-int syscall_munmap (mapid_t mapping)
+int syscall_munmap (mapid_t mapping UNUSED)
 {
   return -1;
 }
