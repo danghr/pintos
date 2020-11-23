@@ -5,7 +5,6 @@
 #include "threads/thread.h"
 #include "threads/malloc.h"
 #include "threads/palloc.h"
-#include "userprog/pagedir.h"
 
 /* Page initialition flag */
 static bool page_table_initialized = false;

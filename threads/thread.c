@@ -476,12 +476,10 @@ init_thread (struct thread *t, const char *name, int priority)
   intr_set_level (old_level);
 
   t->next_fd = 3;
-  t->next_mapid = 1;
   t->exit_status = -1;
   list_init (&(t->child_threads_list));
   list_init (&(t->opened_files));
   list_init (&(t->waiting));
-  list_init (&(t->mapped_files));
   t->is_exited = false;
   t->is_waited = false;
   t->is_waiting = false;

@@ -6,7 +6,6 @@
 #include <stdint.h>
 #include "fixed-point.h"
 #include "synch.h"
-#include "userprog/syscall.h"
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -148,10 +147,6 @@ struct thread
 
     /* List used to store supplemental page tables */
     struct list sup_page_table;
-
-    /* Identifier and list for memory-mapped files */
-    mapid_t next_mapid;
-    struct list mapped_files;
   };
 
 /* If false (default), use round-robin scheduler.
