@@ -39,7 +39,7 @@ int syscall_close (int);
 
 /* Project 3 and optionally project 4. */
 mapid_t syscall_mmap (int, void *);
-void syscall_munmap (mapid_t);
+int syscall_munmap (mapid_t);
 
 /* Project 4 only. */
 bool syscall_chdir (const char *);
@@ -102,6 +102,38 @@ get_fd_entry (int fd)
     {
       if (list_entry (e, struct fd_entry, elem)->fd == fd)
         return list_entry (e, struct fd_entry, elem);
+    }
+  return NULL;
+}
+
+/* Mapped file entry point */
+struct mapid_entry
+{
+  struct file *file;
+  mapid_t mapid;
+  bool freed;
+  struct list_elem elem;
+};
+
+/* Allocate new mappid file identifier in the thread */
+static int
+allocate_mapid (void)
+{
+  return (thread_current ()->next_mapid)++;
+}
+
+/* Get the entry point in current thread according to mapid
+   Returns the address of the fd_entry if found, 
+   NULL if not found */
+static struct fd_entry *
+get_mapid_entry (mapid_t mapid)
+{
+  struct list *mapid_list = &(thread_current ()->opened_files);
+  for (struct list_elem *e = list_begin (mapid_list); 
+    e != list_end (mapid_list); e = e->next)
+    {
+      if (list_entry (e, struct mapid_entry, elem)->mapid == mapid)
+        return list_entry (e, struct mapid_entry, elem);
     }
   return NULL;
 }
@@ -409,6 +441,28 @@ syscall_close (int fd)
   return 0;
 }
 
+/* Project 3 and optionally Project 4. */
+
+/* Maps the file open as FD into the process's virtual address space. 
+   The entire file is mapped into consecutive virtual pages starting 
+   at ADDR. 
+   Return the mapid if succeeds, or -1 if fails. */
+mapid_t 
+syscall_mmap (int fd, void *addr)
+{
+  return -1;
+}
+
+/* Unmaps the mapping designated by mapping, which must be a mapping ID 
+   returned by a previous call to mmap by the same process that has not 
+   yet been unmapped. 
+   To let the wrapper detect success/failure, return -1 if fails and 0
+   otherwise. */
+int syscall_munmap (mapid_t mapping)
+{
+  return -1;
+}
+
 /* System call wrappers.
    Retrive correct argument from the stack and send it to call 
    functions. 
@@ -662,15 +716,34 @@ syscall_close_wrapper (struct intr_frame *f)
 /* Project 3 and optionally project 4. */
 
 static int
-syscall_mmap_wrapper (struct intr_frame *f UNUSED)
+syscall_mmap_wrapper (struct intr_frame *f)
 {
-  return -1;
+  /* Validate memory address */
+  for (int i = 1; i <= 2; i++)
+    if (!is_valid_addr ((void*)((int*)(f->esp + i * 4))))
+      return -1;
+  
+  /* Decode parameters */
+  int fd = *((int*)(f->esp + 4));
+  void *addr = *((void**)(f->esp + 8));
+
+  /* Execute the function */
+  f->eax = syscall_mmap (fd, addr);
+  return 0;
 }
 
 static int
-syscall_munmap_wrapper (struct intr_frame *f UNUSED)
+syscall_munmap_wrapper (struct intr_frame *f)
 {
-  return -1;
+  /* Validate memory address */
+  if (!is_valid_addr ((void*)((int*)(f->esp + 4))))
+    return -1;
+  
+  /* Decode parameters */
+  mapid_t mapid = *((int*)(f->esp + 4));
+
+  /* Execute the function */
+  return syscall_munmap (mapid);
 }
 
 /* Project 4 only. */
