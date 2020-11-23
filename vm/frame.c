@@ -63,7 +63,8 @@ find_entry_to_evict()
 /* Allocate a frame table according to given FLAGS.
    Return the frame table entry of the allocated page, or NULL if fails. */
 struct frame_table_entry *
-frame_allocate_page (struct thread *t, enum palloc_flags flags)
+frame_allocate_page 
+  (struct sup_page_table_entry *spte, enum palloc_flags flags)
 {
   /* This function should ONLY be used to allocate frames from user pool 
      Refer to 4.1.5 (Really? ) */
@@ -73,7 +74,7 @@ frame_allocate_page (struct thread *t, enum palloc_flags flags)
           flags == (PAL_ZERO | PAL_ASSERT | PAL_USER));
   
   /* Try to allocate a page */
-  void *f = palloc_get_page ((PAL_ZERO | PAL_USER));
+  void *f = palloc_get_page (flags);
 
   /* If allocate success */
   if (f != NULL)
@@ -82,7 +83,7 @@ frame_allocate_page (struct thread *t, enum palloc_flags flags)
       struct frame_table_entry *fte = 
         malloc (sizeof (struct frame_table_entry));
       fte->frame = f;
-      fte->owner = t;
+      fte->spte = spte;
       frame_push_to_table (fte);
       return fte;
     }

@@ -1,5 +1,6 @@
 #include "vm/page.h"
 #include <stdlib.h>
+#include <string.h>
 #include <debug.h>
 #include "devices/timer.h"
 #include "threads/thread.h"
@@ -10,21 +11,19 @@
 #include "vm/swap.h"
 /* Push the page table SPTE to the sup_page_table in current thread */
 static void
-sup_push_to_table (struct sup_page_table_entry *spte)
+sup_push_to_table (struct thread *t, struct sup_page_table_entry *spte)
 {
-  struct thread *t = thread_current ();
   ASSERT (!in_list (&(spte->elem), &t->sup_page_table));
 
   list_push_back (&t->sup_page_table, &(spte->elem));
 }
 
-/* Find the corresponding page table entry in current thread according to the 
+/* Find the corresponding page table entry in thread T according to the 
    given user virtual address. 
    Return NULL if not found. */
 struct sup_page_table_entry *
-sup_page_find_entry_uaddr (void *user_vaddr)
+sup_page_find_entry_uaddr (struct thread *t, void *user_vaddr)
 {
-  struct thread *t = thread_current ();
   for (struct list_elem *e = list_begin (&t->sup_page_table);
        e != list_end (&t->sup_page_table); e = list_next (e))
     {
@@ -35,13 +34,12 @@ sup_page_find_entry_uaddr (void *user_vaddr)
   return NULL;
 }
 
-/* Find the corresponding page table entry in current thread according to 
+/* Find the corresponding page table entry in thread T according to 
    the given frame address. 
    Return NULL if not found. */
 struct sup_page_table_entry *
-sup_page_find_entry_frame (void *frame)
+sup_page_find_entry_frame (struct thread *t, void *frame)
 {
-  struct thread *t = thread_current ();
   for (struct list_elem *e = list_begin (&t->sup_page_table);
        e != list_end (&t->sup_page_table); e = list_next (e))
     {
@@ -66,35 +64,35 @@ sup_page_allocate_page (enum palloc_flags flags)
   
   struct thread *t = thread_current ();
 
-  /* Try to allocate a page */
-  struct frame_table_entry *fte = frame_allocate_page (t, flags);
+  /* Allocate memory for SPTE */
+  struct sup_page_table_entry *spte = 
+    malloc (sizeof (struct sup_page_table_entry));
+  if (spte == NULL)
+    return NULL;
 
-  /* If allocate success */
-  if (fte != NULL)
+  /* Try to allocate a page */
+  struct frame_table_entry *fte = frame_allocate_page (spte, flags);
+  if (fte == NULL)
     {
-      /* Push into the list */
-      struct sup_page_table_entry *spte = 
-        malloc (sizeof (struct sup_page_table_entry));
-      if (spte == NULL)
-        {
-          frame_free_page (fte);
-          return NULL;
-        }
-      spte->fte = fte;
-      /* Assigned to NULL temporarily 
-         But actually how to handle this? */
-      spte->user_vaddr = NULL; 
-      spte->dirty = false;
-      spte->accessed = false;
-      spte->access_time = timer_ticks ();
-      if (flags == (PAL_ZERO | PAL_USER) ||
-          flags == (PAL_ZERO | PAL_ASSERT | PAL_USER))
-        {
-          spte->status = ALL_ZERO;
-        }
-      sup_push_to_table (spte);
-      return spte;
+      free (spte);
+      return NULL;
     }
+
+  spte->fte = fte;
+  fte->spte = spte;
+  /* Assigned to NULL temporarily 
+     But actually how to handle this? */
+  spte->user_vaddr = NULL; 
+  spte->dirty = false;
+  spte->accessed = false;
+  spte->access_time = timer_ticks ();
+  if (flags == (PAL_ZERO | PAL_USER) ||
+      flags == (PAL_ZERO | PAL_ASSERT | PAL_USER))
+    {
+      spte->status = ALL_ZERO;
+    }
+  sup_push_to_table (t, spte);
+  return spte;
   
   /* Eviction is handled in frame allocation, so if that returns NULL,
      the frame allocation process fails, and we just return NULL */
@@ -116,7 +114,7 @@ void sup_page_free_spte (struct sup_page_table_entry *spte)
 void
 sup_page_free_page_uaddr (void *uaddr)
 {
-  sup_page_free_spte (sup_page_find_entry_uaddr (uaddr));
+  sup_page_free_spte (sup_page_find_entry_uaddr (thread_current (), uaddr));
 }
 
 /* Free the given page table entry in current thread according to 
@@ -124,7 +122,7 @@ sup_page_free_page_uaddr (void *uaddr)
 void
 sup_page_free_page_frame (void *frame)
 {
-  sup_page_free_spte (sup_page_find_entry_frame (frame));
+  sup_page_free_spte (sup_page_find_entry_frame (thread_current (), frame));
 }
 
 /* Install a new page with all zeros, used in page fault handler
@@ -144,7 +142,7 @@ sup_page_install_zero_page (void *vaddr)
 bool
 load_page (struct thread *curr, void* vaddr)
 {
-  struct sup_page_table_entry* spte = sup_page_find_entry_uaddr(vaddr);
+  struct sup_page_table_entry* spte = sup_page_find_entry_uaddr(curr, vaddr);
   uint32_t *pagedir = curr->pagedir;
   bool writable = true;
   if(spte == NULL) {
