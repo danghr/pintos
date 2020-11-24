@@ -9,6 +9,8 @@
 #include "threads/vaddr.h"
 #include "userprog/pagedir.h"
 #include "vm/swap.h"
+#include "filesys/off_t.h"
+
 /* Push the page table SPTE to the sup_page_table in current thread */
 static void
 sup_push_to_table (struct thread *t, struct sup_page_table_entry *spte)
@@ -85,11 +87,16 @@ sup_page_allocate_page (enum palloc_flags flags)
   spte->user_vaddr = NULL; 
   spte->dirty = false;
   spte->accessed = false;
+  spte->file = NULL;
+  spte->file_offset = 0;
+  spte->file_bytes = 0;
+  spte->zero_bytes = 0;
+  spte->writable = true;
   spte->access_time = timer_ticks ();
   if (flags == (PAL_ZERO | PAL_USER) ||
       flags == (PAL_ZERO | PAL_ASSERT | PAL_USER))
     {
-      spte->status = ALL_ZERO;
+      spte->status = ALL_ZERO;  /* QUESTION: What should others be? */
     }
   sup_push_to_table (t, spte);
   return spte;
@@ -139,12 +146,56 @@ sup_page_install_zero_page (void *vaddr)
   return true;
 }
 
+/* Insert a new page for memory mapped file with the given information */
+void 
+sup_page_install_mmap_page (struct thread *t, void *uaddr, struct file *f, 
+  off_t offset, uint32_t file_bytes, uint32_t zero_bytes, bool writable)
+{
+  struct sup_page_table_entry *spte;
+  spte = (struct sup_page_table_entry *) malloc(
+      sizeof (struct sup_page_table_entry));
+
+  spte->user_vaddr = uaddr;
+  spte->fte = NULL; /* NOTICE: Need to implement lazy load? */
+  spte->status = FROM_FILESYS;
+  spte->dirty = false;
+  spte->file = f;
+  spte->file_offset = offset;
+  spte->file_bytes = file_bytes;
+  spte->zero_bytes = zero_bytes;
+  spte->writable = writable;
+
+  /* Insert the page into the SPTE table */
+  list_push_back (&(t->sup_page_table), &(spte->elem));
+}
+
+/* Reload the page of the memory mapped file and read the data of the file 
+   to the given frame. 
+   Returns true if succeeds, false otherwise. */
+static bool 
+sup_page_load_page_mmap_from_filesys (struct sup_page_table_entry *spte, 
+  void *frame)
+{
+  ASSERT (spte->file_bytes + spte->zero_bytes == PGSIZE);
+
+  /* Set the position of read */
+  file_seek (spte->file, spte->file_offset);
+
+  /* Read bytes from the file and store in the frame */
+  off_t n_read = file_read (spte->file, frame, spte->file_bytes);
+  if(n_read != spte->file_bytes)
+    return false;
+
+  /* Remaining bytes are still zero
+     Write them in the frame */
+  memset (frame + n_read, 0, spte->zero_bytes);
+  return true;
+}
+
 bool
 load_page (struct thread *curr, void* vaddr)
 {
   struct sup_page_table_entry* spte = sup_page_find_entry_uaddr(curr, vaddr);
-  uint32_t *pagedir = curr->pagedir;
-  bool writable = true;
   if(spte == NULL) {
     return false;
   }
@@ -152,7 +203,8 @@ load_page (struct thread *curr, void* vaddr)
     // already loaded
     return true;
   }
-
+  uint32_t *pagedir = curr->pagedir;
+  bool writable = true;
   void* frame = spte->fte->frame;
 
   switch(spte->status)
@@ -166,6 +218,17 @@ load_page (struct thread *curr, void* vaddr)
     
     case IN_SWAP:
       read_from_swap(spte->swap_index,frame);
+      break;
+    
+    case FROM_FILESYS:
+      /* Load the content of corresponding file */
+      if (!sup_page_load_page_mmap_from_filesys (spte, frame))
+        {
+          /* Free the page if not succeess */
+          sup_page_free_spte (spte);
+          return false;
+        }
+      writable = spte->writable;
       break;
   }
   pagedir_set_page(pagedir,vaddr,frame,writable);

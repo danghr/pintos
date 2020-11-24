@@ -13,6 +13,9 @@
 #include "devices/shutdown.h"
 #include "devices/intq.h"
 #include "devices/input.h"
+#include "vm/frame.h"
+#include "vm/page.h"
+#include "vm/swap.h"
 
 static void syscall_handler (struct intr_frame *);
 
@@ -110,16 +113,18 @@ get_fd_entry (int fd)
 struct mapid_entry
 {
   struct file *file;
+  size_t file_length;
   mapid_t mapid;
+  void *user_vaddr;
   bool freed;
   struct list_elem elem;
 };
 
 /* Allocate new mappid file identifier in the thread */
 static int
-allocate_mapid (void)
+allocate_mapid (struct thread *t)
 {
-  return (thread_current ()->next_mapid)++;
+  return (t->next_mapid)++;
 }
 
 /* Get the entry point in current thread according to mapid
@@ -128,7 +133,7 @@ allocate_mapid (void)
 static struct mapid_entry *
 get_mapid_entry (mapid_t mapid)
 {
-  struct list *mapid_list = &(thread_current ()->opened_files);
+  struct list *mapid_list = &(thread_current ()->mapped_files);
   for (struct list_elem *e = list_begin (mapid_list); 
     e != list_end (mapid_list); e = e->next)
     {
@@ -448,8 +453,78 @@ syscall_close (int fd)
    at ADDR. 
    Return the mapid if succeeds, or -1 if fails. */
 mapid_t 
-syscall_mmap (int fd UNUSED, void *addr UNUSED)
+syscall_mmap (int fd, void *addr)
 {
+  /* Handel illegal address */
+  if (addr == NULL || pg_ofs(addr) != 0)
+    return -1;
+  /* Handle illegal file descriptor */
+  if (fd < 3)
+    return -1;
+  struct fd_entry *fd_e = get_fd_entry (fd);
+  if (fd_e == NULL)
+    return -1;
+  /* Allocate space for mapid entry */
+  struct mapid_entry *mapid_e = malloc (sizeof (struct mapid_entry));
+  if (mapid_e == NULL)
+    return -1;
+  
+  struct thread *t = thread_current ();
+  lock_acquire (&file_lock);
+
+  /* Reopen file */
+  struct file *f = file_reopen (fd_e->file);
+  if (f == NULL)
+    goto SYSCALL_MMAP_FAIL;
+  
+  /* Get the length of the file */
+  size_t f_len = file_length (f);
+  if (f_len == 0)
+    goto SYSCALL_MMAP_FAIL;
+  
+  /* Check that all page address are not mapped already */
+  for (size_t i = 0; i < f_len; i += PGSIZE)
+    {
+      void *addr_to_test = addr + i;
+      if (sup_page_find_entry_uaddr (t, addr_to_test) != NULL)
+        goto SYSCALL_MMAP_FAIL;
+    }
+  
+  /* Allocate memory */
+  for (size_t i = 0; i < f_len; i += PGSIZE)
+    {
+      void *addr_to_map = addr + i;
+      size_t file_bytes, zero_bytes;
+
+      /* Record bytes mapped to the file and additional zeros */
+      if (i + PGSIZE < f_len)
+        {
+          file_bytes = PGSIZE;
+          zero_bytes = 0;
+        }
+      else
+        {
+          file_bytes = f_len - i;
+          zero_bytes = PGSIZE - (f_len - i);
+        }
+      sup_page_install_mmap_page (t, addr_to_map, f, i, file_bytes, 
+        zero_bytes, true);
+    }
+  
+  /* Allocate mapid and put into the mapped list */
+  mapid_t mapid = allocate_mapid (t);
+  mapid_e->file = f;
+  mapid_e->mapid = mapid;
+  mapid_e->file_length = f_len;
+  mapid_e->user_vaddr = addr;
+  mapid_e->freed = false;
+  list_push_back (&(t->mapped_files), &(mapid_e->elem));
+  lock_release (&file_lock);
+  return mapid;
+
+SYSCALL_MMAP_FAIL:
+  /* Handle failure */
+  lock_release (&file_lock);
   return -1;
 }
 

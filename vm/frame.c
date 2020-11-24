@@ -59,6 +59,7 @@ find_entry_to_evict()
       if (list_entry (e, struct frame_table_entry, elem))
         return list_entry (e, struct frame_table_entry, elem);
     }
+    return NULL;
 }
 
 /* Allocate a frame table according to given FLAGS.
