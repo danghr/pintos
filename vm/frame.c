@@ -1,5 +1,6 @@
 #include "vm/frame.h"
 #include "vm/page.h"
+#include "vm/swap.h"
 #include <stdlib.h>
 #include <debug.h>
 #include "threads/thread.h"
@@ -79,19 +80,21 @@ frame_allocate_page
   void *f = palloc_get_page (flags);
 
   /* If allocate success */
-  if (f != NULL)
+  if (f == NULL)
     {
-      /* Push into the list */
-      struct frame_table_entry *fte = 
-        malloc (sizeof (struct frame_table_entry));
-      fte->frame = f;
-      fte->spte = spte;
-      frame_push_to_table (fte);
-      return fte;
+      struct frame_table_entry* fte_to_evict = find_entry_to_evict();
+      size_t swap_index = store_in_swap(fte_to_evict->frame);
+      fte_to_evict->spte->status = IN_SWAP;
+      fte_to_evict->spte->swap_index = swap_index;
+      frame_free_page(fte_to_evict->frame);
+      f = palloc_get_page(flags);
     }
-  /* Need to implement evicting a frame according to LRU from 
-     the current memory and reallocate the frame. */
-  return NULL;
+
+  struct frame_table_entry *fte = malloc (sizeof (struct frame_table_entry));
+  fte->frame = f;
+  fte->spte = spte;
+  frame_push_to_table (fte);
+  return fte;
 }
 
 /* Free the given frame table entry FTE and the corresponding 

@@ -29,7 +29,7 @@ sup_page_find_entry_uaddr (struct thread *t, void *user_vaddr)
   for (struct list_elem *e = list_begin (&t->sup_page_table);
        e != list_end (&t->sup_page_table); e = list_next (e))
     {
-      if (list_entry (e, struct sup_page_table_entry, elem)->fte->frame
+      if (list_entry (e, struct sup_page_table_entry, elem)->user_vaddr
           == user_vaddr)
         return list_entry (e, struct sup_page_table_entry, elem);
     }
@@ -74,6 +74,7 @@ sup_page_allocate_page (enum palloc_flags flags)
 
   /* Try to allocate a page */
   struct frame_table_entry *fte = frame_allocate_page (spte, flags);
+
   if (fte == NULL)
     {
       free (spte);
