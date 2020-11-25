@@ -437,7 +437,7 @@ syscall_close (int fd)
   struct fd_entry *fd_e = get_fd_entry (fd);
   if (fd_e == NULL)
     return -1;
-  lock_acquire (&file_lock);
+  lock_acquire (&file_lock);  /* Problem here */
   file_close (fd_e->file);
   lock_release (&file_lock);
 
@@ -557,6 +557,7 @@ int syscall_munmap (mapid_t mapping)
   list_remove (&(mapid_e->elem));
   file_close (mapid_e->file);
   free (mapid_e);
+  lock_release (&file_lock);
   return 0;
 
 SYSCALL_MUNMAP_FAIL:
