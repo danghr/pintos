@@ -55,6 +55,10 @@ void sup_page_free_page_uaddr (void *);
 void sup_page_free_page_frame (void *);
 
 bool sup_page_install_zero_page (void *);
+bool sup_page_load_page_mmap_from_filesys (struct sup_page_table_entry *, 
+  void *);
+bool sup_page_write_page_mmap_to_filesys (struct sup_page_table_entry *, 
+  void *);
 void sup_page_install_mmap_page (struct thread *, void *, struct file *, 
   off_t, uint32_t, uint32_t, bool);
 bool load_page (struct thread *, void *);

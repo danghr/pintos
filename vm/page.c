@@ -147,33 +147,10 @@ sup_page_install_zero_page (void *vaddr)
   return true;
 }
 
-/* Insert a new page for memory mapped file with the given information */
-void 
-sup_page_install_mmap_page (struct thread *t, void *uaddr, struct file *f, 
-  off_t offset, uint32_t file_bytes, uint32_t zero_bytes, bool writable)
-{
-  struct sup_page_table_entry *spte;
-  spte = (struct sup_page_table_entry *) malloc(
-      sizeof (struct sup_page_table_entry));
-
-  spte->user_vaddr = uaddr;
-  spte->fte = NULL; /* NOTICE: Need to implement lazy load? */
-  spte->status = FROM_FILESYS;
-  spte->dirty = false;
-  spte->file = f;
-  spte->file_offset = offset;
-  spte->file_bytes = file_bytes;
-  spte->zero_bytes = zero_bytes;
-  spte->writable = writable;
-
-  /* Insert the page into the SPTE table */
-  list_push_back (&(t->sup_page_table), &(spte->elem));
-}
-
 /* Reload the page of the memory mapped file and read the data of the file 
    to the given frame. 
    Returns true if succeeds, false otherwise. */
-static bool 
+bool 
 sup_page_load_page_mmap_from_filesys (struct sup_page_table_entry *spte, 
   void *frame)
 {
@@ -191,6 +168,27 @@ sup_page_load_page_mmap_from_filesys (struct sup_page_table_entry *spte,
      Write them in the frame */
   memset (frame + n_read, 0, spte->zero_bytes);
   return true;
+}
+
+/* Insert a new page for memory mapped file with the given information */
+void 
+sup_page_install_mmap_page (struct thread *t UNUSED, void *uaddr, 
+  struct file *f, off_t offset, uint32_t file_bytes, 
+  uint32_t zero_bytes, bool writable)
+{
+  struct sup_page_table_entry *spte = sup_page_allocate_page ((PAL_USER | PAL_ZERO));
+  if (spte == NULL)
+    return ;
+
+  spte->user_vaddr = uaddr;
+  spte->status = FROM_FILESYS;
+  spte->dirty = false;
+  spte->file = f;
+  spte->file_offset = offset;
+  spte->file_bytes = file_bytes;
+  spte->zero_bytes = zero_bytes;
+  spte->writable = writable;
+  sup_page_load_page_mmap_from_filesys (spte, spte->fte->frame);
 }
 
 bool

@@ -456,7 +456,11 @@ mapid_t
 syscall_mmap (int fd, void *addr)
 {
   /* Handel illegal address */
-  if (addr == NULL || pg_ofs(addr) != 0)
+  if (addr == NULL || pg_ofs (addr) != 0)
+    return -1;
+  if (!is_user_vaddr (addr))
+    return -1;
+  if (pagedir_get_page (thread_current ()->pagedir, addr) != NULL)
     return -1;
   /* Handle illegal file descriptor */
   if (fd < 3)
