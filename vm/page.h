@@ -61,6 +61,8 @@ bool sup_page_write_page_mmap_to_filesys (struct sup_page_table_entry *,
   void *);
 void sup_page_install_mmap_page (struct thread *, void *, struct file *, 
   off_t, uint32_t, uint32_t, bool);
+void sup_page_remove_mmap_page (struct thread *, void *);
+void sup_page_mmap_write_back (struct sup_page_table_entry *);
 bool load_page (struct thread *, void *);
 
 #endif /* vm/page.h */

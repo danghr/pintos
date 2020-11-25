@@ -537,8 +537,32 @@ SYSCALL_MMAP_FAIL:
    yet been unmapped. 
    To let the wrapper detect success/failure, return -1 if fails and 0
    otherwise. */
-int syscall_munmap (mapid_t mapping UNUSED)
+int syscall_munmap (mapid_t mapping)
 {
+  struct mapid_entry *mapid_e = get_mapid_entry (mapping);
+  if (mapid_e == NULL)
+    return -1;
+  
+  struct thread *t = thread_current ();
+  lock_acquire (&file_lock);
+
+  /* Iterate through each mapped page */
+  size_t file_size = mapid_e->file_length;
+  for (size_t i = 0; i < file_size; i += PGSIZE) {
+    void *addr_to_unmap = mapid_e->user_vaddr + i;
+    sup_page_remove_mmap_page (t, addr_to_unmap);
+  }
+
+  /* Remove the item from the list */
+  list_remove (&(mapid_e->elem));
+  file_close (mapid_e->file);
+  free (mapid_e);
+  return 0;
+
+SYSCALL_MUNMAP_FAIL:
+  UNUSED
+  /* Handle failure */
+  lock_release (&file_lock);
   return -1;
 }
 

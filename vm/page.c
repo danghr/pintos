@@ -170,6 +170,26 @@ sup_page_load_page_mmap_from_filesys (struct sup_page_table_entry *spte,
   return true;
 }
 
+/* Write the data in page of the memory mapped file to the corresponding 
+   file.
+   Returns true if succeeds, false otherwise. */
+bool 
+sup_page_write_page_mmap_to_filesys (struct sup_page_table_entry *spte, 
+  void *frame)
+{
+  ASSERT (spte->file_bytes + spte->zero_bytes == PGSIZE);
+
+  /* Set the position of write */
+  file_seek (spte->file, spte->file_offset);
+
+  /* Read bytes from the file and store in the frame */
+  off_t n_write = file_write (spte->file, frame, spte->file_bytes);
+  if(n_write != spte->file_bytes)
+    return false;
+  
+  return true;
+}
+
 /* Insert a new page for memory mapped file with the given information */
 void 
 sup_page_install_mmap_page (struct thread *t UNUSED, void *uaddr, 
@@ -189,6 +209,17 @@ sup_page_install_mmap_page (struct thread *t UNUSED, void *uaddr,
   spte->zero_bytes = zero_bytes;
   spte->writable = writable;
   sup_page_load_page_mmap_from_filesys (spte, spte->fte->frame);
+}
+
+/* Remove the given page for memory mapped file with the given information */
+void 
+sup_page_remove_mmap_page (struct thread *t, void *uaddr)
+{
+  struct sup_page_table_entry *spte = sup_page_find_entry_uaddr (t, uaddr);
+  if (spte == NULL)
+    return ;
+  sup_page_write_page_mmap_to_filesys (spte, spte->fte->frame);
+  sup_page_free_spte (spte);
 }
 
 bool
