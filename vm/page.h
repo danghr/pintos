@@ -22,11 +22,11 @@ struct sup_page_table_entry
 {
   struct frame_table_entry *fte;   /* Corresponding frame entry */
   
-  /* How to handle user virtual address in later operations? 
-     Should we handle it during lasy load? */
   void *user_vaddr;         /* User virtual address of the page */
   bool writable;
   enum state status;
+
+  struct thread *owner;
 
   uint64_t access_time;     /* Record the last access time for LRU */
   bool dirty;

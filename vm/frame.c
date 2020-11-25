@@ -79,15 +79,18 @@ frame_allocate_page
   /* Try to allocate a page */
   void *f = palloc_get_page (flags);
 
-  /* If allocate success */
+  /* If allocate not success */
   if (f == NULL)
     {
-      struct frame_table_entry* fte_to_evict = find_entry_to_evict();
-      size_t swap_index = store_in_swap(fte_to_evict->frame);
-      fte_to_evict->spte->status = IN_SWAP;
-      fte_to_evict->spte->swap_index = swap_index;
-      frame_free_page(fte_to_evict->frame);
-      f = palloc_get_page(flags);
+      struct frame_table_entry *fte_to_evict = find_entry_to_evict ();
+      struct sup_page_table_entry *spte_correspond = fte_to_evict->spte;
+      size_t swap_index = store_in_swap (fte_to_evict->frame);
+      spte_correspond->status = IN_SWAP;
+      spte_correspond->swap_index = swap_index;
+      frame_free_page (fte_to_evict->frame);
+      f = palloc_get_page (flags);
+      if (f == NULL)
+        terminate_program (-1);
     }
 
   struct frame_table_entry *fte = malloc (sizeof (struct frame_table_entry));

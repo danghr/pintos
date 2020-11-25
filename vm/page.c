@@ -81,6 +81,7 @@ sup_page_allocate_page (enum palloc_flags flags)
       return NULL;
     }
 
+  spte->owner = t;
   spte->fte = fte;
   fte->spte = spte;
   /* Assigned to NULL temporarily 
