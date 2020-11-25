@@ -499,3 +499,6 @@ fabric.properties
 # Latex temp files
 *.synctex.gz
 *.xdv
+
+# Visual Studio Code
+*.code-workspace
