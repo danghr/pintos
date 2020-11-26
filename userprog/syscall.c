@@ -184,6 +184,7 @@ is_valid_addr (const void *uaddr)
 static void
 syscall_handler (struct intr_frame *f) 
 {
+  printf ("Syscall!\n");
   if (!is_valid_addr (f->esp + 4))
     terminate_program (-1);
   

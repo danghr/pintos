@@ -87,17 +87,10 @@ frame_allocate_page
     {
       struct frame_table_entry *fte_to_evict = find_entry_to_evict ();
       struct sup_page_table_entry *spte_correspond = fte_to_evict->spte;
-      if(spte_correspond->dirty == false 
-          || spte_correspond->writable == false)
-      {
-        spte->status = FROM_FILESYS;
-      }
-      else{
-        size_t swap_index = store_in_swap (fte_to_evict->frame);
-        spte_correspond->status = IN_SWAP;
-        spte_correspond->swap_index = swap_index;
-      }
-      frame_free_page (fte_to_evict->frame);
+      size_t swap_index = store_in_swap (fte_to_evict->frame);
+      spte_correspond->status = IN_SWAP;
+      spte_correspond->swap_index = swap_index;
+      frame_free_fte (fte_to_evict);
       f = palloc_get_page (flags);
       if (f == NULL)
         terminate_program (-1);
@@ -115,6 +108,8 @@ frame_allocate_page
 void
 frame_free_fte (struct frame_table_entry *fte)
 {
+  printf ("Freeing page %p\n", fte->spte->user_vaddr);
+  pagedir_clear_page (fte->spte->owner->pagedir, fte->spte->user_vaddr);
   if (!lock_held_by_current_thread (&frame_table_lock))
     lock_acquire (&frame_table_lock);
   list_remove (&(fte->elem));

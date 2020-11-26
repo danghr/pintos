@@ -148,6 +148,7 @@ struct thread
 
     /* List used to store supplemental page tables */
     struct list sup_page_table;
+    struct lock sup_page_table_lock;
 
     /* Identifier and list for memory-mapped files */
     mapid_t next_mapid;

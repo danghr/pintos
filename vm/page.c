@@ -15,9 +15,11 @@
 static void
 sup_push_to_table (struct thread *t, struct sup_page_table_entry *spte)
 {
+  printf ("Pushing SPTE to list with address %p\n", spte->user_vaddr);
   ASSERT (!in_list (&(spte->elem), &t->sup_page_table));
-
+  lock_acquire (&(t->sup_page_table_lock));
   list_push_back (&t->sup_page_table, &(spte->elem));
+  lock_release (&(t->sup_page_table_lock));
 }
 
 /* Find the corresponding page table entry in thread T according to the 
@@ -26,9 +28,11 @@ sup_push_to_table (struct thread *t, struct sup_page_table_entry *spte)
 struct sup_page_table_entry *
 sup_page_find_entry_uaddr (struct thread *t, void *user_vaddr)
 {
+  printf ("Finding page %p in thread %s\n", user_vaddr, t->name);
   for (struct list_elem *e = list_begin (&t->sup_page_table);
        e != list_end (&t->sup_page_table); e = list_next (e))
     {
+      printf ("This vaddr: %p\n", list_entry (e, struct sup_page_table_entry, elem)->user_vaddr);
       if (list_entry (e, struct sup_page_table_entry, elem)->user_vaddr
           == user_vaddr)
         return list_entry (e, struct sup_page_table_entry, elem);
@@ -86,7 +90,7 @@ sup_page_allocate_page (enum palloc_flags flags)
   fte->spte = spte;
   /* Assigned to NULL temporarily 
      But actually how to handle this? */
-  spte->user_vaddr = NULL; 
+  spte->user_vaddr = 0x1; 
   spte->dirty = false;
   spte->accessed = false;
   spte->file = NULL;
@@ -112,13 +116,8 @@ sup_page_allocate_page (enum palloc_flags flags)
    page table. */
 void sup_page_free_spte (struct sup_page_table_entry *spte)
 {
-  struct thread *t = thread_current ();
-  if (pagedir_get_page (t->pagedir, spte->user_vaddr) != NULL)
-    pagedir_clear_page (t->pagedir, spte->user_vaddr);
-
-  list_remove (&(spte->elem));
-
   frame_free_fte (spte->fte);
+  list_remove (&(spte->elem));
   free (spte);
 }
 
@@ -233,8 +232,10 @@ sup_page_remove_mmap_page (struct thread *t, void *uaddr)
 bool
 load_page (struct thread *curr, void* vaddr)
 {
+  printf ("Loading the page at %p\n", vaddr);
   struct sup_page_table_entry* spte = sup_page_find_entry_uaddr(curr, vaddr);
   if(spte == NULL) {
+    printf ("Cannot find page %p\n", vaddr);
     return false;
   }
   if(spte->status == ON_FRAME) {
