@@ -180,6 +180,9 @@ sup_page_write_page_mmap_to_filesys (struct sup_page_table_entry *spte,
 {
   ASSERT (spte->file_bytes + spte->zero_bytes == PGSIZE);
 
+  if (!pagedir_is_dirty (spte->owner->pagedir, spte->user_vaddr))
+    return true;
+
   /* Set the position of write */
   file_seek (spte->file, spte->file_offset);
 
