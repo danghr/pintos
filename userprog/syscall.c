@@ -109,17 +109,6 @@ get_fd_entry (int fd)
   return NULL;
 }
 
-/* Mapped file entry point */
-struct mapid_entry
-{
-  struct file *file;
-  size_t file_length;
-  mapid_t mapid;
-  void *user_vaddr;
-  bool freed;
-  struct list_elem elem;
-};
-
 /* Allocate new mappid file identifier in the thread */
 static int
 allocate_mapid (struct thread *t)

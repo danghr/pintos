@@ -256,6 +256,20 @@ void process_exit (void)
          directory, or our active page directory will be one
          that's been freed (and cleared). */
     /* Re-allow writes to the executable */
+    if (!list_empty (&(cur->mapped_files)))
+      {
+        for (struct list_elem *e = list_begin (&(cur->mapped_files));
+          e != list_end (&(cur->mapped_files)); e = list_next (e))
+          {
+            struct mapid_entry *mapid_e = list_entry 
+              (e, struct mapid_entry, elem);
+            struct sup_page_table_entry *spte = sup_page_find_entry_uaddr 
+              (cur, mapid_e->user_vaddr);
+            if (spte == NULL)
+              continue;
+            sup_page_write_page_mmap_to_filesys (spte, spte->fte->frame);
+          }
+      }
     if (cur->executing_file != NULL) {
       file_close (cur->executing_file);
     }
