@@ -112,10 +112,6 @@ sup_page_allocate_page (enum palloc_flags flags)
    page table. */
 void sup_page_free_spte (struct sup_page_table_entry *spte)
 {
-  struct thread *t = thread_current ();
-  if (pagedir_get_page (t->pagedir, spte->user_vaddr) != NULL)
-    pagedir_clear_page (t->pagedir, spte->user_vaddr);
-  
   list_remove (&(spte->elem));
 
   frame_free_fte (spte->fte);
@@ -217,7 +213,6 @@ sup_page_install_mmap_page (struct thread *t UNUSED, void *uaddr,
   spte->zero_bytes = zero_bytes;
   spte->writable = writable;
   sup_page_load_page_mmap_from_filesys (spte, spte->fte->frame);
-  pagedir_set_page (spte->owner->pagedir, uaddr, spte->fte->frame, writable);
 }
 
 /* Remove the given page for memory mapped file with the given information */
@@ -228,7 +223,6 @@ sup_page_remove_mmap_page (struct thread *t, void *uaddr)
   if (spte == NULL)
     return ;
   sup_page_write_page_mmap_to_filesys (spte, spte->fte->frame);
-  pagedir_clear_page (spte->owner->pagedir, spte->fte->frame);
   sup_page_free_spte (spte);
 }
 
