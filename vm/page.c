@@ -112,6 +112,10 @@ sup_page_allocate_page (enum palloc_flags flags)
    page table. */
 void sup_page_free_spte (struct sup_page_table_entry *spte)
 {
+  struct thread *t = thread_current ();
+  if (pagedir_get_page (t->pagedir, spte->user_vaddr) != NULL)
+    pagedir_clear_page (t->pagedir, spte->user_vaddr);
+
   list_remove (&(spte->elem));
 
   frame_free_fte (spte->fte);
