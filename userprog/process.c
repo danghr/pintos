@@ -612,7 +612,6 @@ static bool
 setup_stack (void **esp, char **argv, int argc)
 {
   bool success = false;
-
   /* Try to get a page from user pool and let it be a zeroed 
      page. --ZTY*/
   struct sup_page_table_entry* spte = sup_page_allocate_page (PAL_USER);

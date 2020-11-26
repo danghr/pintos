@@ -120,7 +120,6 @@ pagedir_set_page (uint32_t *pd, void *upage, void *kpage, bool writable)
       /* Record info of SPTE when setting the page */
       spte->user_vaddr = upage;
       spte->writable = writable;
-      printf ("Setting up page %p\n", spte->user_vaddr);
       return true;
     }
   else

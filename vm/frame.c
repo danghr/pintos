@@ -73,7 +73,7 @@ frame_allocate_page
   (struct sup_page_table_entry *spte, enum palloc_flags flags)
 {
   /* This function should ONLY be used to allocate frames from user pool 
-     Refer to 4.1.5 (Really? ) */
+     Refer to 4.1.5 */
   ASSERT (flags == PAL_USER || 
           flags == (PAL_ZERO | PAL_USER) ||
           flags == (PAL_ASSERT | PAL_USER) ||
@@ -93,9 +93,8 @@ frame_allocate_page
       frame_free_fte (fte_to_evict);
       f = palloc_get_page (flags);
       if (f == NULL)
-        terminate_program (-1);
+        return NULL;
     }
-
   struct frame_table_entry *fte = malloc (sizeof (struct frame_table_entry));
   fte->frame = f;
   fte->spte = spte;
@@ -108,13 +107,13 @@ frame_allocate_page
 void
 frame_free_fte (struct frame_table_entry *fte)
 {
-  printf ("Freeing page %p\n", fte->spte->user_vaddr);
   pagedir_clear_page (fte->spte->owner->pagedir, fte->spte->user_vaddr);
   if (!lock_held_by_current_thread (&frame_table_lock))
     lock_acquire (&frame_table_lock);
   list_remove (&(fte->elem));
   lock_release (&frame_table_lock);
   palloc_free_page (fte->frame);
+  fte->spte->fte = NULL;
   free (fte);
 }
 
