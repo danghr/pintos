@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
+#include "devices/timer.h"
 #include "threads/init.h"
 #include "threads/pte.h"
 #include "threads/palloc.h"
@@ -137,8 +138,12 @@ pagedir_get_page (uint32_t *pd, const void *uaddr)
   ASSERT (is_user_vaddr (uaddr));
   
   pte = lookup_page (pd, uaddr, false);
-  if (pte != NULL && (*pte & PTE_P) != 0)
-    return pte_get_page (*pte) + pg_ofs (uaddr);
+  if (pte != NULL && (*pte & PTE_P) != 0) 
+    {
+      sup_page_find_entry_frame (thread_current (), pte_get_page (*pte))
+        ->access_time = timer_ticks ();
+      return pte_get_page (*pte) + pg_ofs (uaddr);
+    }
   else
     return NULL;
 }
