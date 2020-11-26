@@ -54,15 +54,17 @@ frame_table_init ()
 struct frame_table_entry *
 find_entry_to_evict()
 {
-    for (struct list_elem *e = list_begin (&frame_table);
-       e != list_end (&frame_table); e = list_next (e))
-    {
-      if (list_entry (e, struct frame_table_entry, elem))
-        return list_entry (e, struct frame_table_entry, elem);
-    }
-    return NULL;
+  list_sort(&frame_table,(list_less_func *)compare_access_time, NULL);
+  if(list_front(&frame_table) != NULL)
+    return list_front(&frame_table);
+  PANIC("DO not need to evict");
 }
 
+bool compare_access_time(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+{
+  return list_entry(a,struct frame_table_entry,elem)->spte->access_time 
+          < list_entry(b,struct frame_table_entry,elem)->spte->access_time;
+}
 /* Allocate a frame table according to given FLAGS.
    Return the frame table entry of the allocated page, or NULL if fails. */
 struct frame_table_entry *
@@ -84,9 +86,16 @@ frame_allocate_page
     {
       struct frame_table_entry *fte_to_evict = find_entry_to_evict ();
       struct sup_page_table_entry *spte_correspond = fte_to_evict->spte;
-      size_t swap_index = store_in_swap (fte_to_evict->frame);
-      spte_correspond->status = IN_SWAP;
-      spte_correspond->swap_index = swap_index;
+      if(spte_correspond->dirty == false 
+          || spte_correspond->writable == false)
+      {
+        spte->status = FROM_FILESYS;
+      }
+      else{
+        size_t swap_index = store_in_swap (fte_to_evict->frame);
+        spte_correspond->status = IN_SWAP;
+        spte_correspond->swap_index = swap_index;
+      }
       frame_free_page (fte_to_evict->frame);
       f = palloc_get_page (flags);
       if (f == NULL)
@@ -109,7 +118,6 @@ frame_free_fte (struct frame_table_entry *fte)
     lock_acquire (&frame_table_lock);
   list_remove (&(fte->elem));
   lock_release (&frame_table_lock);
-
   palloc_free_page (fte->frame);
   free (fte);
 }

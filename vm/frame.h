@@ -27,3 +27,4 @@ void frame_free_fte (struct frame_table_entry *);
 void frame_free_page (void *);
 struct frame_table_entry *find_entry_to_evict(void);
 #endif /* userprog/frame.h */
+bool compare_access_time(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
