@@ -14,7 +14,7 @@ struct frame_table_entry
 {
   /* Entry of the supplemental page table */
   void *frame;              /* Address of the frame */
-  struct sup_page_table_entry *spte;     /* Owner thread/process of the page */
+  struct sup_page_table_entry *spte;     /* Corresponding SPTE */
   struct list_elem elem;    /* List element */
 };
 
@@ -26,5 +26,6 @@ struct frame_table_entry *frame_allocate_page
 void frame_free_fte (struct frame_table_entry *);
 void frame_free_page (void *);
 struct frame_table_entry *find_entry_to_evict(void);
+bool compare_access_time(const struct list_elem *, 
+  const struct list_elem *, void *);
 #endif /* userprog/frame.h */
-bool compare_access_time(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);

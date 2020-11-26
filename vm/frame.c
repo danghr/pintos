@@ -56,7 +56,8 @@ find_entry_to_evict()
 {
   list_sort(&frame_table,(list_less_func *)compare_access_time, NULL);
   if(list_front(&frame_table) != NULL)
-    return list_front(&frame_table);
+    return list_entry 
+      (list_front (&frame_table), struct frame_table_entry, elem);
   PANIC("DO not need to evict");
 }
 
