@@ -116,9 +116,7 @@ sup_page_allocate_page (enum palloc_flags flags)
    page table. */
 void sup_page_free_spte (struct sup_page_table_entry *spte)
 {
-  
-  
-  if(spte->status == ON_FRAME)
+  if(spte->status == ON_FRAME || spte->status == FROM_FILESYS)
     frame_free_fte (spte->fte);
   if(spte->status == IN_SWAP)
     swap_free(spte->swap_index);

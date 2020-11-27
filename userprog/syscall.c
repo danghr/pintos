@@ -172,9 +172,6 @@ is_valid_addr (const void *uaddr)
 {
   if (!is_user_vaddr (uaddr))
     return false;
-  if (pagedir_get_page (thread_current ()->pagedir, uaddr) 
-    == NULL)
-    return false;
   return true;
 }
 
@@ -731,6 +728,9 @@ syscall_read_wrapper (struct intr_frame *f)
     terminate_program(-1);
   }
 
+  if (!is_valid_addr (buffer))
+    terminate_program (-1);
+
   /* Write the return value */
   f->eax = syscall_read (fd, buffer, length);
   return 0;
@@ -739,7 +739,6 @@ syscall_read_wrapper (struct intr_frame *f)
 static int
 syscall_write_wrapper (struct intr_frame *f)
 {
-  // printf("esp:%d, base:%d, diff:%d \n",(unsigned)f->esp, (unsigned)PHYS_BASE, (unsigned)PHYS_BASE - (unsigned)f->esp);
   /* Validate memory address */
   for (int i = 1; i <= 4; i++)
     if (!is_valid_addr ((void*)(((char *)f->esp + 4 * i))))
@@ -750,14 +749,16 @@ syscall_write_wrapper (struct intr_frame *f)
   void *buffer = *(char**)(f->esp + 8);
   unsigned length = *((unsigned*)(f->esp + 12));
   if (buffer == NULL)
-  {
-    return -1;
-  }
+    terminate_program(-1);
+
+  if (!is_valid_addr (buffer))
+    terminate_program (-1);
 
   /* Write the return value */
   f->eax = syscall_write (fd, buffer, length);
   return 0;
 }
+
 static int
 syscall_seek_wrapper (struct intr_frame *f)
 {

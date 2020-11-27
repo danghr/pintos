@@ -158,6 +158,7 @@ page_fault (struct intr_frame *f)
         {
           f->eip = (void*) f->eax;
           f->eax = 0xffffffff;
+          terminate_program (-1);
           return;
         }
         else{
@@ -182,12 +183,13 @@ page_fault (struct intr_frame *f)
     { // kernel mode
       f->eip = (void *) f->eax;
       f->eax = 0xffffffff;
+      terminate_program (-1);
       return;
     }
-    else
+    else 
       terminate_program (-1);
   }
-   return;
+  return;
 
   /* To implement virtual memory, delete the rest of the function
      body, and replace it with code that brings in the page to
