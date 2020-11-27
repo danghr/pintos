@@ -10,12 +10,7 @@ struct file
     off_t pos;                  /* Current position. */
     bool deny_write;            /* Has file_deny_write() been called? */
   };
-void 
-file_pos_change(struct file *file, off_t bytes)
-{
-  file->pos += bytes;
-  return true;
-}
+
 /* Opens a file for the given INODE, of which it takes ownership,
    and returns the new file.  Returns a null pointer if an
    allocation fails or if INODE is null. */
