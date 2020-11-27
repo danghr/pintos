@@ -81,17 +81,24 @@ frame_allocate_page
   
   /* Try to allocate a page */
   void *f = palloc_get_page (flags);
-
   /* If allocate not success */
   if (f == NULL)
     {
       struct frame_table_entry *fte_to_evict = find_entry_to_evict ();
       struct sup_page_table_entry *spte_correspond = fte_to_evict->spte;
-      size_t swap_index = store_in_swap (fte_to_evict->frame);
-      spte_correspond->status = IN_SWAP;
-      spte_correspond->swap_index = swap_index;
+      if(spte_correspond->file != NULL && (spte_correspond->writable == false || spte_correspond->dirty == false))
+      {
+        spte_correspond->status = FROM_FILESYS;
+      }
+      else{
+        size_t swap_index = store_in_swap (fte_to_evict->frame);
+        spte_correspond->status = IN_SWAP;
+        spte_correspond->swap_index = swap_index;
+      }
+      
       frame_free_fte (fte_to_evict);
       f = palloc_get_page (flags);
+      
       if (f == NULL)
         return NULL;
     }

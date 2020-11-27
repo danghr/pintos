@@ -183,7 +183,7 @@ is_valid_addr (const void *uaddr)
    wrappers. */
 static void
 syscall_handler (struct intr_frame *f) 
-{
+{  
   if (!is_valid_addr (f->esp + 4))
     terminate_program (-1);
   
@@ -500,7 +500,7 @@ syscall_mmap (int fd, void *addr)
           file_bytes = f_len - i;
           zero_bytes = PGSIZE - (f_len - i);
         }
-      sup_page_install_mmap_page (t, addr_to_map, f, i, file_bytes, 
+      sup_page_allocate_mmap_page (t, addr_to_map, f, i, file_bytes, 
         zero_bytes, true);
     }
   
@@ -726,7 +726,7 @@ syscall_read_wrapper (struct intr_frame *f)
   void *buffer = *(char**)(f->esp + 8);
   unsigned length = *((unsigned*)(f->esp + 12));
 
-  if (buffer == NULL || !is_valid_addr(buffer + length ))
+  if (buffer == NULL)
   {
     terminate_program(-1);
   }
@@ -749,7 +749,7 @@ syscall_write_wrapper (struct intr_frame *f)
   int fd = *((int*)(f->esp + 4));
   void *buffer = *(char**)(f->esp + 8);
   unsigned length = *((unsigned*)(f->esp + 12));
-  if (buffer == NULL || !is_valid_addr((char *) buffer + length))
+  if (buffer == NULL)
   {
     return -1;
   }

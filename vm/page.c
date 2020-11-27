@@ -116,7 +116,12 @@ sup_page_allocate_page (enum palloc_flags flags)
    page table. */
 void sup_page_free_spte (struct sup_page_table_entry *spte)
 {
-  frame_free_fte (spte->fte);
+  
+  
+  if(spte->status == ON_FRAME)
+    frame_free_fte (spte->fte);
+  if(spte->status == IN_SWAP)
+    swap_free(spte->swap_index);
   list_remove (&(spte->elem));
   free (spte);
 }
@@ -139,16 +144,28 @@ sup_page_free_page_frame (void *frame)
 
 /* Install a new page with all zeros, used in page fault handler
    Return true if success, or false otherwise */
-bool 
+struct sup_page_table_entry*
 sup_page_install_zero_page (void *vaddr)
 {
-  struct sup_page_table_entry *spte = sup_page_allocate_page ((PAL_ZERO | PAL_USER));
+  struct sup_page_table_entry *spte = malloc(sizeof(struct sup_page_table_entry));
   if(spte == NULL)
-    return false;
+    return NULL;
 
   spte->user_vaddr = vaddr;
   spte->status = ALL_ZERO;
-  return true;
+  spte->owner = thread_current();
+  spte->fte = NULL;
+  /* Assigned to NULL temporarily 
+     But actually how to handle this? */
+  spte->dirty = false;
+  spte->accessed = false;
+  spte->file = NULL;
+  spte->file_offset = 0;
+  spte->file_bytes = 0;
+  spte->zero_bytes = 0;
+  spte->writable = true;
+  sup_push_to_table(thread_current(),spte);
+  return spte;
 }
 
 /* Reload the page of the memory mapped file and read the data of the file 
@@ -171,6 +188,7 @@ sup_page_load_page_mmap_from_filesys (struct sup_page_table_entry *spte,
   /* Remaining bytes are still zero
      Write them in the frame */
   memset (frame + n_read, 0, spte->zero_bytes);
+  spte->access_time = timer_ticks();
   return true;
 }
 
@@ -198,8 +216,32 @@ sup_page_write_page_mmap_to_filesys (struct sup_page_table_entry *spte,
 }
 
 /* Insert a new page for memory mapped file with the given information */
-void 
+struct sup_page_table_entry*
 sup_page_install_mmap_page (struct thread *t UNUSED, void *uaddr, 
+  struct file *f, off_t offset, uint32_t file_bytes, 
+  uint32_t zero_bytes, bool writable)
+{
+  struct sup_page_table_entry *spte = malloc(sizeof(struct sup_page_table_entry));
+      
+  if (spte == NULL)
+    return NULL;  
+  spte->owner = thread_current();
+  spte->user_vaddr = uaddr;
+  spte->fte = NULL;
+  spte->access_time = 0;
+  spte->status = FROM_FILESYS;
+  spte->dirty = false;
+  spte->file = f;
+  spte->file_offset = offset;
+  spte->file_bytes = file_bytes;
+  spte->zero_bytes = zero_bytes;
+  spte->writable = writable;
+  sup_push_to_table(thread_current(),spte);
+  return spte;
+  //sup_page_load_page_mmap_from_filesys (spte, spte->fte->frame);
+}
+void 
+sup_page_allocate_mmap_page (struct thread *t UNUSED, void *uaddr, 
   struct file *f, off_t offset, uint32_t file_bytes, 
   uint32_t zero_bytes, bool writable)
 {
@@ -216,8 +258,8 @@ sup_page_install_mmap_page (struct thread *t UNUSED, void *uaddr,
   spte->zero_bytes = zero_bytes;
   spte->writable = writable;
   sup_page_load_page_mmap_from_filesys (spte, spte->fte->frame);
+  pagedir_set_page (spte->owner->pagedir, uaddr, spte->fte->frame, writable);
 }
-
 /* Remove the given page for memory mapped file with the given information */
 void 
 sup_page_remove_mmap_page (struct thread *t, void *uaddr)
@@ -249,14 +291,14 @@ load_page (struct thread *curr, void* vaddr)
   /* Allocate the frame if no corresponding frame */
   if (spte->fte == NULL) 
   {
-    spte->fte = frame_allocate_page (spte, PAL_USER);
+    spte->fte = frame_allocate_page (spte, PAL_USER|PAL_ZERO);
   }
-  
   void* frame = spte->fte->frame;
   switch(spte->status)
   {
     case ALL_ZERO:
       memset(frame, 0, PGSIZE);
+      spte->access_time = timer_ticks();
       break;
     
     case ON_FRAME:
@@ -264,6 +306,7 @@ load_page (struct thread *curr, void* vaddr)
     
     case IN_SWAP:
       read_from_swap(spte->swap_index,frame);
+      spte->access_time = timer_ticks();
       break;
     
     case FROM_FILESYS:

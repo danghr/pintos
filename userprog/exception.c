@@ -176,19 +176,16 @@ page_fault (struct intr_frame *f)
     if (sup_page_find_entry_uaddr (thread_current (), page_boudary) == NULL)
       sup_page_install_zero_page(page_boudary);
   }
-  if(!load_page(curr_thread,page_boudary))
+  if (!load_page (curr_thread, page_boudary))
   {
-    if(!user) 
+    if (!user) 
     { // kernel mode
       f->eip = (void *) f->eax;
       f->eax = 0xffffffff;
       return;
     }
     else
-    {
       terminate_program (-1);
-    }
-
   }
    return;
 

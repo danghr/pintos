@@ -28,6 +28,8 @@ size_t store_in_swap(void *page)
 
     /*Find the free swap slot.*/
     size_t swap_index = bitmap_scan(swap_bitmap,0,1,true);
+    if(swap_index == BITMAP_ERROR)
+        PANIC("no place in the swap.");
     for (size_t i = 0; i < (PGSIZE / BLOCK_SECTOR_SIZE); i++)
     {
         /* We store the information in the swap_block. */

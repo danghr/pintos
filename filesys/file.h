@@ -26,4 +26,5 @@ void file_seek (struct file *, off_t);
 off_t file_tell (struct file *);
 off_t file_length (struct file *);
 
+void file_pos_change(struct file *file, off_t bytes);
 #endif /* filesys/file.h */
