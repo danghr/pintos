@@ -128,6 +128,8 @@ page_fault (struct intr_frame *f)
   bool not_present;  /* True: not-present page, false: writing r/o page. */
   bool write;        /* True: access was write, false: access was read. */
   bool user;         /* True: access by user, false: access by kernel. */
+  bool on_stack;     /* True: access a stack area, false: not in stack. */
+  bool in_frame;     /* True: should extend the stack, false: illegal. */
   void *fault_addr;  /* Fault address. */
 
   /* Obtain faulting address, the virtual address that was
@@ -152,6 +154,7 @@ page_fault (struct intr_frame *f)
   user = (f->error_code & PF_U) != 0;
   struct thread *curr_thread = thread_current ();
   void* page_boudary = (void *) pg_round_down (fault_addr);
+
   /* If we change an w/o file the terminate the program. */
   if (!not_present)
     {
@@ -162,35 +165,39 @@ page_fault (struct intr_frame *f)
           terminate_program (-1);
           return;
         }
-        else{
+        else
           terminate_program (-1);
-      }
-          
     }
    
+  /* Determine whether need to grow the stack */
   void* esp = user ? f->esp : curr_thread->curr_esp;
-  bool on_stack, in_frame;
   on_stack = fault_addr >= PHYS_BASE - STACK_SIZE && fault_addr < PHYS_BASE;
-  in_frame = esp <= fault_addr || fault_addr == f->esp - 4 || fault_addr == f->esp -32;
-
+  in_frame = esp <= fault_addr || fault_addr == f->esp - 4 || 
+    fault_addr == f->esp -32;
+  
   if (on_stack && in_frame)
-  {
-    if (sup_page_find_entry_uaddr (thread_current (), page_boudary) == NULL)
-      sup_page_install_zero_page (page_boudary);
-  }
-  if (!load_page (curr_thread, page_boudary))
-  {
-    if (!user) 
-    { 
-      // kernel mode
-      f->eip = (void *) f->eax;
-      f->eax = 0xffffffff;
-      terminate_program (-1);
-      return;
+    {
+      /* Grow the stack by installing a zero page */
+      if (sup_page_find_entry_uaddr (thread_current (), page_boudary) 
+        == NULL)
+        sup_page_install_zero_page (page_boudary);
     }
-    else 
-      terminate_program (-1);
-  }
+
+  /* Try to load the page with given user virtual address.
+     Terminate the program if fails.  */
+  if (!load_page (curr_thread, page_boudary))
+    {
+      if (!user) 
+        { 
+          // kernel mode
+          f->eip = (void *) f->eax;
+          f->eax = 0xffffffff;
+          terminate_program (-1);
+          return;
+        }
+      else 
+        terminate_program (-1);
+    }
   return;
 }
 

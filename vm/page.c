@@ -49,7 +49,8 @@ sup_page_find_entry_frame (struct thread *t, void *frame)
   if (frame == NULL)
     return NULL;
   for (struct list_elem *e = list_begin (&t->sup_page_table);
-    e != list_end (&t->sup_page_table); e = list_next (e))
+    e != list_end (&t->sup_page_table); 
+    e = list_next (e))
     {
       if (list_entry (e, struct sup_page_table_entry, elem)
         ->fte == NULL)
@@ -110,7 +111,8 @@ sup_page_allocate_page (enum palloc_flags flags)
 
 /* Free the given page table entry SPTE and the corresponding 
    page table. */
-void sup_page_free_spte (struct sup_page_table_entry *spte)
+void
+sup_page_free_spte (struct sup_page_table_entry *spte)
 {
   if(spte->status == ON_FRAME && spte->file != NULL)
     sup_page_write_page_mmap_to_filesys (spte, spte->fte->frame);
@@ -119,6 +121,7 @@ void sup_page_free_spte (struct sup_page_table_entry *spte)
     frame_free_fte (spte->fte);
   if(spte->status == IN_SWAP)
     swap_free(spte->swap_index);
+  
   list_remove (&(spte->elem));
   free (spte);
 }
@@ -262,72 +265,73 @@ sup_page_remove_mmap_page (struct thread *t, void *uaddr)
   sup_page_free_spte (spte);
 }
 
+/* Load a page with giver user virtual address VADDR in swap/file */
 bool
 load_page (struct thread *curr, void* vaddr)
 {
   if (vaddr == NULL)
     return false;
   
-  struct sup_page_table_entry* spte = sup_page_find_entry_uaddr (curr, vaddr);
-  if(spte == NULL) {
+  struct sup_page_table_entry* spte = sup_page_find_entry_uaddr 
+    (curr, vaddr);
+  if (spte == NULL)
     return false;
-  }
-  if(spte->status == ON_FRAME) {
-    // already loaded
+
+  if(spte->status == ON_FRAME)
+    /* Already loaded */
     return true;
-  }
+
   uint32_t *pagedir = curr->pagedir;
   bool writable = true;
 
   /* Allocate the frame if no corresponding frame */
   if (spte->fte == NULL) 
-  {
-    spte->fte = frame_allocate_page (spte, PAL_USER|PAL_ZERO);
-  }
+    spte->fte = frame_allocate_page (spte, (PAL_USER | PAL_ZERO));
+  
   void* frame = spte->fte->frame;
   switch(spte->status)
-  {
-    case ALL_ZERO:
-      memset(frame, 0, PGSIZE);
-      spte->access_time = timer_ticks();
-      break;
-    
-    case ON_FRAME:
-      break;
-    
-    case IN_SWAP:
-      read_from_swap(spte->swap_index,frame);
-      spte->access_time = timer_ticks();
-      break;
-    
-    case FROM_FILESYS:
-      /* Load the content of corresponding file */
-      if (!sup_page_load_page_mmap_from_filesys (spte, frame))
-        {
-          /* Free the page if not succeess */
-          sup_page_free_spte (spte);
-          return false;
-        }
-      writable = spte->writable;
-      break;
-    
-    case FROM_FILESYS_SEGMENTS:
-      /* Load the content of corresponding file */
-      if (!sup_page_load_page_mmap_from_filesys (spte, frame))
-        {
-          /* Free the page if not succeess */
-          sup_page_free_spte (spte);
-          return false;
-        }
-      writable = spte->writable;
+    {
+      case ALL_ZERO:
+        memset (frame, 0, PGSIZE);
+        spte->access_time = timer_ticks();
+        break;
+      
+      case ON_FRAME:
+        break;
+      
+      case IN_SWAP:
+        read_from_swap (spte->swap_index,frame);
+        spte->access_time = timer_ticks();
+        break;
+      
+      case FROM_FILESYS:
+        /* Load the content of corresponding file */
+        if (!sup_page_load_page_mmap_from_filesys (spte, frame))
+          {
+            /* Free the page if not succeess */
+            sup_page_free_spte (spte);
+            return false;
+          }
+        writable = spte->writable;
+        break;
+      
+      case FROM_FILESYS_SEGMENTS:
+        /* Load the content of corresponding file */
+        if (!sup_page_load_page_mmap_from_filesys (spte, frame))
+          {
+            /* Free the page if not succeess */
+            sup_page_free_spte (spte);
+            return false;
+          }
+        writable = spte->writable;
 
-      /* Clear the file info so they can be stroed in swap if evicted */
-      spte->file = NULL;
-      spte->file_bytes = 0;
-      spte->file_offset = 0;
-      break;
-  }
-  pagedir_set_page(pagedir,vaddr,frame,writable);
+        /* Clear the file info so they can be stroed in swap if evicted */
+        spte->file = NULL;
+        spte->file_bytes = 0;
+        spte->file_offset = 0;
+        break;
+    }
+  pagedir_set_page (pagedir, vaddr, frame, writable);
   spte->status = ON_FRAME;
   return true; /* Do nothing */
 }

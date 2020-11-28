@@ -134,6 +134,39 @@ get_mapid_entry (mapid_t mapid)
   return NULL;
 }
 
+/* Kill the program which is violating the system */
+void
+terminate_program (int exit_status)
+{
+  thread_current ()->exit_status = exit_status;
+  thread_exit ();
+}
+
+/* Verify that a memory address is valid in user program */
+static bool
+is_valid_addr (const void *uaddr)
+{
+  if (!is_user_vaddr (uaddr))
+    return false;
+  return true;
+}
+
+/* Check whether an address is a string. */
+bool 
+check_the_string (void *str)
+{
+  while (is_valid_addr(str))
+    {
+      if (*(char *)str == '\0')
+        break;
+      (char*)str++;
+    }
+  if (is_valid_addr (str))
+    return true;
+  else
+    return false;
+}
+
 void
 syscall_init (void) 
 {
@@ -158,23 +191,6 @@ syscall_init (void)
   syscall_handler_wrapper[SYS_READDIR] = &syscall_readdir_wrapper;
   syscall_handler_wrapper[SYS_ISDIR] = &syscall_isdir_wrapper;
   syscall_handler_wrapper[SYS_INUMBER] = &syscall_inumber_wrapper;
-}
-
-/* Kill the program which is violating the system */
-void
-terminate_program (int exit_status)
-{
-  thread_current ()->exit_status = exit_status;
-  thread_exit ();
-}
-
-/* Verify that a memory address is valid in user program */
-static bool
-is_valid_addr (const void *uaddr)
-{
-  if (!is_user_vaddr (uaddr))
-    return false;
-  return true;
 }
 
 /* System call handler.
@@ -238,7 +254,6 @@ syscall_halt (void)
 void
 syscall_exit (int status)
 {
-
   terminate_program (status);
 }
 
@@ -525,7 +540,8 @@ SYSCALL_MMAP_FAIL:
    yet been unmapped. 
    To let the wrapper detect success/failure, return -1 if fails and 0
    otherwise. */
-int syscall_munmap (mapid_t mapping)
+int
+syscall_munmap (mapid_t mapping)
 {
   struct mapid_entry *mapid_e = get_mapid_entry (mapping);
   if (mapid_e == NULL)
@@ -547,12 +563,6 @@ int syscall_munmap (mapid_t mapping)
   free (mapid_e);
   lock_release (&file_lock);
   return 0;
-
-SYSCALL_MUNMAP_FAIL:
-  UNUSED
-  /* Handle failure */
-  lock_release (&file_lock);
-  return -1;
 }
 
 /* System call wrappers.
@@ -587,19 +597,7 @@ syscall_exit_wrapper (struct intr_frame *f)
   syscall_exit (status);
   return 0;
 }
-bool 
-check_the_string(void *str){
-  while(is_valid_addr(str))
-  {
-    if(*(char *)str == '\0')
-      break;
-    (char*)str++;
-  }
-  if(is_valid_addr(str))
-    return true;
-  else
-    return false;
-}
+
 static int
 syscall_exec_wrapper (struct intr_frame *f)
 {
@@ -815,8 +813,8 @@ static int
 syscall_mmap_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
-  for (int i = 1; i <= 2; i++)
-    if (!is_valid_addr ((void*)((int*)(f->esp + i * 4))))
+  for (int i = 1; i <= 3; i++)
+    if (!is_valid_addr ((void*)(f->esp + i * 4)))
       return -1;
   
   /* Decode parameters */
@@ -832,8 +830,9 @@ static int
 syscall_munmap_wrapper (struct intr_frame *f)
 {
   /* Validate memory address */
-  if (!is_valid_addr ((void*)((int*)(f->esp + 4))))
-    return -1;
+  for (int i = 1; i <= 3; i++)
+    if (!is_valid_addr ((void*)(f->esp + i * 4)))
+      return -1;
   
   /* Decode parameters */
   mapid_t mapid = *((int*)(f->esp + 4));

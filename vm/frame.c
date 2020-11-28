@@ -8,12 +8,12 @@
 #include "threads/palloc.h"
 #include "userprog/pagedir.h"
 
-/* Page initialition flag */
+/* Page initialition flag. */
 static bool page_table_initialized = false;
-/* Lock of frame table */
+/* Lock of frame table. */
 static struct lock frame_table_lock;
 
-/* Push frame table FTE to frame_table */
+/* Push frame table FTE to frame_table. */
 static void
 frame_push_to_table (struct frame_table_entry *fte)
 {
@@ -65,19 +65,20 @@ find_entry_to_evict ()
   PANIC ("DO not need to evict");
 }
 
-bool compare_access_time (const struct list_elem *a,
-       const struct list_elem *b, void *aux UNUSED)
+bool 
+compare_access_time (const struct list_elem *a, const struct list_elem *b, 
+  void *aux UNUSED)
 {
-  return list_entry (a,struct frame_table_entry,elem)
+  return list_entry (a, struct frame_table_entry,elem)
     ->spte->access_time 
-    < list_entry (b,struct frame_table_entry,elem)
+    < list_entry (b, struct frame_table_entry,elem)
     ->spte->access_time;
 }
 /* Allocate a frame table according to given FLAGS.
    Return the frame table entry of the allocated page, or NULL if fails. */
 struct frame_table_entry *
-frame_allocate_page 
-  (struct sup_page_table_entry *spte, enum palloc_flags flags)
+frame_allocate_page (struct sup_page_table_entry *spte, 
+  enum palloc_flags flags)
 {
   /* This function should ONLY be used to allocate frames from user pool 
      Refer to 4.1.5 */

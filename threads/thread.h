@@ -137,14 +137,14 @@ struct thread
     fixed_point recent_cpu;             /* "recent_cpu" value of a thread. */
 
     /* List used to store its child threads */
-    struct list child_threads_list;
-    struct list_elem child_elem;
+    struct list child_threads_list;    /* List of child threads */
+    struct list_elem child_elem;       /* Element of a child thread */
 
-    struct list waiting;
-    bool is_exited;
-    bool is_waited;
-    bool is_waiting;
-    struct thread* parent_thread;
+    struct list waiting;               /* Waiting list */
+    bool is_exited;                    /* Thread is exited */
+    bool is_waited;                    /* Thread is waited by others */
+    bool is_waiting;                   /* Thread is waiting for others */
+    struct thread* parent_thread;      /* Parent thread */
 
     /* Supplemental page table */
     struct list sup_page_table;         /* List of supplemental page tables */
