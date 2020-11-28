@@ -36,7 +36,8 @@ pagedir_destroy (uint32_t *pd)
     return;
   /* Use Assert to make sure not destroy the init_page_dir. --ZTY */
   ASSERT (pd != init_page_dir);
-  for (pde = pd; pde < pd + pd_no (PHYS_BASE); pde++)
+  for (pde = pd; 
+    pde < pd + pd_no (PHYS_BASE); pde++)
     if (*pde & PTE_P) 
       {
         uint32_t *pt = pde_get_pt (*pde);
@@ -140,7 +141,8 @@ pagedir_get_page (uint32_t *pd, const void *uaddr)
   pte = lookup_page (pd, uaddr, false);
   if (pte != NULL && (*pte & PTE_P) != 0) 
     {
-      sup_page_find_entry_frame (thread_current (), pte_get_page (*pte))
+      sup_page_find_entry_frame 
+        (thread_current (), pte_get_page (*pte))
         ->access_time = timer_ticks ();
       return pte_get_page (*pte) + pg_ofs (uaddr);
     }

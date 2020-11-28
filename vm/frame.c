@@ -28,10 +28,13 @@ frame_push_to_table (struct frame_table_entry *fte)
 struct frame_table_entry *
 frame_find_entry (void *addr)
 {
-  for (struct list_elem *e = list_begin (&frame_table);
-       e != list_end (&frame_table); e = list_next (e))
+  for (struct list_elem *e = 
+    list_begin (&frame_table);
+    e != list_end (&frame_table); 
+    e = list_next (e))
     {
-      if (list_entry (e, struct frame_table_entry, elem)->frame == addr)
+      if (list_entry (e, struct frame_table_entry, elem)
+        ->frame == addr)
         return list_entry (e, struct frame_table_entry, elem);
     }
   return NULL;
@@ -48,21 +51,27 @@ frame_table_init ()
   lock_init (&frame_table_lock);
 }
 
-/* When the memory is full, we need to implement the eviction. */
+/* When the memory is full, we use the LRU to find the fte to evict. */
 struct frame_table_entry *
-find_entry_to_evict()
+find_entry_to_evict ()
 {
-  list_sort(&frame_table,(list_less_func *)compare_access_time, NULL);
-  if(list_front(&frame_table) != NULL)
-    return list_entry 
-      (list_front (&frame_table), struct frame_table_entry, elem);
-  PANIC("DO not need to evict");
+  list_sort (&frame_table, 
+    (list_less_func *) compare_access_time, NULL);
+
+  if (list_front (&frame_table) != NULL)
+    return list_entry (list_front (&frame_table),
+      struct frame_table_entry, elem);
+
+  PANIC ("DO not need to evict");
 }
 
-bool compare_access_time(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+bool compare_access_time (const struct list_elem *a,
+       const struct list_elem *b, void *aux UNUSED)
 {
-  return list_entry(a,struct frame_table_entry,elem)->spte->access_time 
-          < list_entry(b,struct frame_table_entry,elem)->spte->access_time;
+  return list_entry (a,struct frame_table_entry,elem)
+    ->spte->access_time 
+    < list_entry (b,struct frame_table_entry,elem)
+    ->spte->access_time;
 }
 /* Allocate a frame table according to given FLAGS.
    Return the frame table entry of the allocated page, or NULL if fails. */
@@ -86,15 +95,19 @@ frame_allocate_page
   
   /* Try to allocate a page */
   void *f = palloc_get_page (flags);
-  /* If allocate not success */
+
+  /* If allocate not success, we evict the frame and reallocate. */
   if (f == NULL)
     {
-      struct frame_table_entry *fte_to_evict = find_entry_to_evict ();
-      struct sup_page_table_entry *spte_correspond = fte_to_evict->spte;
+      struct frame_table_entry *fte_to_evict =
+        find_entry_to_evict ();
+      struct sup_page_table_entry *spte_correspond =
+        fte_to_evict->spte;
       
       if (spte_correspond->file == NULL)
         {
-          size_t swap_index = store_in_swap (fte_to_evict->frame);
+          size_t swap_index = store_in_swap
+            (fte_to_evict->frame);
           spte_correspond->status = IN_SWAP;
           spte_correspond->swap_index = swap_index;
         }
@@ -132,7 +145,8 @@ frame_free_fte (struct frame_table_entry *fte)
       lock_acquire (&frame_table_lock);
       lock_flag = true;
     }
-  pagedir_clear_page (fte->spte->owner->pagedir, fte->spte->user_vaddr);
+  pagedir_clear_page 
+    (fte->spte->owner->pagedir, fte->spte->user_vaddr);
   if (!lock_held_by_current_thread (&frame_table_lock))
     lock_acquire (&frame_table_lock);
   list_remove (&(fte->elem));

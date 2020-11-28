@@ -28,11 +28,14 @@ struct sup_page_table_entry *
 sup_page_find_entry_uaddr (struct thread *t, void *user_vaddr)
 {
   for (struct list_elem *e = list_begin (&t->sup_page_table);
-    e != list_end (&t->sup_page_table); e = list_next (e))
+    e != list_end (&t->sup_page_table); 
+    e = list_next (e))
     {
-      if (list_entry (e, struct sup_page_table_entry, elem)->user_vaddr
-          == user_vaddr)
-        return list_entry (e, struct sup_page_table_entry, elem);
+      if (list_entry 
+      (e, struct sup_page_table_entry, elem)
+      ->user_vaddr == user_vaddr)
+        return
+         list_entry (e, struct sup_page_table_entry, elem);
     }
   return NULL;
 }
@@ -48,11 +51,13 @@ sup_page_find_entry_frame (struct thread *t, void *frame)
   for (struct list_elem *e = list_begin (&t->sup_page_table);
     e != list_end (&t->sup_page_table); e = list_next (e))
     {
-      if (list_entry (e, struct sup_page_table_entry, elem)->fte == NULL)
+      if (list_entry (e, struct sup_page_table_entry, elem)
+        ->fte == NULL)
         continue;
-      if (list_entry (e, struct sup_page_table_entry, elem)->fte->frame
-          == frame)
-        return list_entry (e, struct sup_page_table_entry, elem);
+      if (list_entry (e, struct sup_page_table_entry, elem)
+        ->fte->frame == frame)
+        return 
+          list_entry (e, struct sup_page_table_entry, elem);
     }
   return NULL;
 }
@@ -78,18 +83,18 @@ sup_page_allocate_page (enum palloc_flags flags)
     return NULL;
 
   /* Try to allocate a page */
-  struct frame_table_entry *fte = frame_allocate_page (spte, flags);
+  struct frame_table_entry *fte = 
+    frame_allocate_page (spte, flags);
 
   if (fte == NULL)
     {
       free (spte);
       return NULL;
     }
+  /*Set the spte attributes.*/
   spte->owner = t;
   spte->fte = fte;
   fte->spte = spte;
-  /* Assigned to NULL temporarily 
-     But actually how to handle this? */
   spte->user_vaddr = NULL; 
   spte->dirty = false;
   spte->accessed = false;
@@ -99,17 +104,8 @@ sup_page_allocate_page (enum palloc_flags flags)
   spte->zero_bytes = 0;
   spte->writable = true;
   spte->access_time = timer_ticks ();
-  if (flags == (PAL_ZERO | PAL_USER) ||
-      flags == (PAL_ZERO | PAL_ASSERT | PAL_USER))
-    {
-      spte->status = ALL_ZERO;  /* QUESTION: What should others be? */
-    }
   sup_push_to_table (t, spte);
   return spte;
-  
-  /* Eviction is handled in frame allocation, so if that returns NULL,
-     the frame allocation process fails, and we just return NULL */
-  return NULL;
 }
 
 /* Free the given page table entry SPTE and the corresponding 
@@ -148,16 +144,14 @@ sup_page_free_page_frame (void *frame)
 struct sup_page_table_entry*
 sup_page_install_zero_page (void *vaddr)
 {
-  struct sup_page_table_entry *spte = malloc(sizeof(struct sup_page_table_entry));
-  if(spte == NULL)
+  struct sup_page_table_entry *spte = malloc (sizeof (struct sup_page_table_entry));
+  if (spte == NULL)
     return NULL;
 
   spte->user_vaddr = vaddr;
   spte->status = ALL_ZERO;
-  spte->owner = thread_current();
+  spte->owner = thread_current ();
   spte->fte = NULL;
-  /* Assigned to NULL temporarily 
-     But actually how to handle this? */
   spte->dirty = false;
   spte->accessed = false;
   spte->file = NULL;
@@ -165,7 +159,7 @@ sup_page_install_zero_page (void *vaddr)
   spte->file_bytes = 0;
   spte->zero_bytes = 0;
   spte->writable = true;
-  sup_push_to_table(thread_current(),spte);
+  sup_push_to_table (thread_current (), spte);
   return spte;
 }
 
@@ -183,13 +177,13 @@ sup_page_load_page_mmap_from_filesys (struct sup_page_table_entry *spte,
 
   /* Read bytes from the file and store in the frame */
   off_t n_read = file_read (spte->file, frame, spte->file_bytes);
-  if(n_read != spte->file_bytes)
+  if (n_read != spte->file_bytes)
     return false;
 
   /* Remaining bytes are still zero
      Write them in the frame */
   memset (frame + n_read, 0, spte->zero_bytes);
-  spte->access_time = timer_ticks();
+  spte->access_time = timer_ticks ();
   return true;
 }
 

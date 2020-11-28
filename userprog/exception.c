@@ -150,8 +150,9 @@ page_fault (struct intr_frame *f)
   not_present = (f->error_code & PF_P) == 0;
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
-  struct thread *curr_thread = thread_current();
-  void* page_boudary = (void *) pg_round_down(fault_addr);
+  struct thread *curr_thread = thread_current ();
+  void* page_boudary = (void *) pg_round_down (fault_addr);
+  /* If we change an w/o file the terminate the program. */
   if (!not_present)
     {
       if(!user)
@@ -175,12 +176,13 @@ page_fault (struct intr_frame *f)
   if (on_stack && in_frame)
   {
     if (sup_page_find_entry_uaddr (thread_current (), page_boudary) == NULL)
-      sup_page_install_zero_page(page_boudary);
+      sup_page_install_zero_page (page_boudary);
   }
   if (!load_page (curr_thread, page_boudary))
   {
     if (!user) 
-    { // kernel mode
+    { 
+      // kernel mode
       f->eip = (void *) f->eax;
       f->eax = 0xffffffff;
       terminate_program (-1);
@@ -190,20 +192,5 @@ page_fault (struct intr_frame *f)
       terminate_program (-1);
   }
   return;
-
-  /* To implement virtual memory, delete the rest of the function
-     body, and replace it with code that brings in the page to
-     which fault_addr refers. */
-  if(!user)
-    {
-      printf ("Page fault at %p: %s error %s page in %s context.\n",
-      fault_addr,
-      not_present ? "not present" : "rights violation",
-      write ? "writing" : "reading",
-      user ? "user" : "kernel");
-      kill (f);
-    }
-  else
-    terminate_program(-1);
 }
 
