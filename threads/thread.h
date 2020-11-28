@@ -98,62 +98,62 @@ struct waiting_sema
    ready state is on the run queue, whereas only a thread in the
    blocked state is on a semaphore wait list. */
 struct thread
-  {
-    /* Owned by thread.c. */
-    tid_t tid;                          /* Thread identifier. */
-    enum thread_status status;          /* Thread state. */
-    char name[16];                      /* Name (for debugging purposes). */
-    uint8_t *stack;                     /* Saved stack pointer. */
-    int priority;                       /* Priority. */
-    struct list_elem allelem;           /* List element for all threads
-                                           list. */
-    int64_t sleeping_ticks;             /* A counter of remaining sleeping 
-                                           ticks. */
-    void* curr_esp;
-    /* Shared between thread.c and synch.c. */
-    struct list_elem elem;              /* List element. */
+{
+  /* Owned by thread.c. */
+  tid_t tid;                          /* Thread identifier. */
+  enum thread_status status;          /* Thread state. */
+  char name[16];                      /* Name (for debugging purposes). */
+  uint8_t *stack;                     /* Saved stack pointer. */
+  int priority;                       /* Priority. */
+  struct list_elem allelem;           /* List element for all threads
+                                        list. */
+  int64_t sleeping_ticks;             /* A counter of remaining sleeping 
+                                        ticks. */
+  void* curr_esp;
+  /* Shared between thread.c and synch.c. */
+  struct list_elem elem;              /* List element. */
 
 #ifdef USERPROG
-    /* Owned by userprog/process.c. */
-    uint32_t *pagedir;                  /* Page directory. */
-    int exit_status;                    /* Exit status of the thread */
-    int next_fd;                        /* Next file descriptor */
-    struct list opened_files;           /* List of opened files */
-    struct file *executing_file;        /* Pointer to the executable of the 
-                                           current thread */
+  /* Owned by userprog/process.c. */
+  uint32_t *pagedir;                  /* Page directory. */
+  int exit_status;                    /* Exit status of the thread */
+  int next_fd;                        /* Next file descriptor */
+  struct list opened_files;           /* List of opened files */
+  struct file *executing_file;        /* Pointer to the executable of the 
+                                        current thread */
 #endif
 
-    /* Owned by thread.c. */
-    unsigned magic;                     /* Detects stack overflow. */
+  /* Owned by thread.c. */
+  unsigned magic;                     /* Detects stack overflow. */
 
-   /* Variables used in priority donation. */
-    struct list locks;                  /* List of holding locks. */
-    int priority_wo_donation;           /* Priority without donation. */
-    struct lock *lock_wait;             /* The lock a thread is waiting 
-                                           for. */
+  /* Variables used in priority donation. */
+  struct list locks;                  /* List of holding locks. */
+  int priority_wo_donation;           /* Priority without donation. */
+  struct lock *lock_wait;             /* The lock a thread is waiting 
+                                        for. */
 
-   /* Variables used in advanced schedular. */
-    int nice;                           /* "nice" value of a thread. */
-    fixed_point recent_cpu;             /* "recent_cpu" value of a thread. */
+  /* Variables used in advanced schedular. */
+  int nice;                           /* "nice" value of a thread. */
+  fixed_point recent_cpu;             /* "recent_cpu" value of a thread. */
 
-    /* List used to store its child threads */
-    struct list child_threads_list;    /* List of child threads */
-    struct list_elem child_elem;       /* Element of a child thread */
+  /* List used to store its child threads */
+  struct list child_threads_list;    /* List of child threads */
+  struct list_elem child_elem;       /* Element of a child thread */
 
-    struct list waiting;               /* Waiting list */
-    bool is_exited;                    /* Thread is exited */
-    bool is_waited;                    /* Thread is waited by others */
-    bool is_waiting;                   /* Thread is waiting for others */
-    struct thread* parent_thread;      /* Parent thread */
+  struct list waiting;               /* Waiting list */
+  bool is_exited;                    /* Thread is exited */
+  bool is_waited;                    /* Thread is waited by others */
+  bool is_waiting;                   /* Thread is waiting for others */
+  struct thread* parent_thread;      /* Parent thread */
 
-    /* Supplemental page table */
-    struct list sup_page_table;         /* List of supplemental page tables */
-    struct lock sup_page_table_lock;    /* Lock of the list of SPT */
+  /* Supplemental page table */
+  struct list sup_page_table;         /* List of supplemental page tables */
+  struct lock sup_page_table_lock;    /* Lock of the list of SPT */
 
-    /* Memory-mapped files */
-    mapid_t next_mapid;                 /* Next identifier for mmap files */
-    struct list mapped_files;           /* List of memory-mapped files */
-  };
+  /* Memory-mapped files */
+  mapid_t next_mapid;                 /* Next identifier for mmap files */
+  struct list mapped_files;           /* List of memory-mapped files */
+};
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
