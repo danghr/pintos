@@ -73,19 +73,52 @@
         
             \subsubsection{Copy here the declaration of each new or changed `\texttt{struct}' or `\texttt{struct}' member, global or static variable, `\texttt{typedef}', or enumeration. Identify the purpose of each in 25 words or less. }
         
+            \begin{itemize}
+                \item In file \texttt{vm/frame.h}
+\begin{verbatim}
+/* List of all frame tables allocated here */
+struct list frame_table;
+
+/* Entries of frame table */
+struct frame_table_entry
+{
+    /* Address of the frame */
+    void *frame;
+    /* Corresponding SPTE */
+    struct sup_page_table_entry *spte;
+    /* List element */
+    struct list_elem elem;
+};
+\end{verbatim}
+                \item In file \texttt{vm/frame.c}
+\begin{verbatim}
+/* Page initialization flag */
+static bool page_table_initialized = false;
+/* Lock of frame table */
+static struct lock frame_table_lock;
+\end{verbatim}
+            \end{itemize}
         \subsection{Algorithms}
         
             \subsubsection{In a few paragraphs, describe your code for accessing the data stored in the SPT about a given page. }
 
+                Each page in SPT corresponds to a frame of kernel page, allocated by \texttt{palloc\_get\_page()} in user pool. When loading the page in the page fault handler, the page will be set up using \texttt{pagedir\_set\_page()}, and meanwhile the corresponding user virtual address will be stored in the SPT. Thus, the process can access the data in this SPT, and other operations can find this page using the user virtual address, frame address, etc. 
+
             \subsubsection{How does your code coordinate accessed and dirty bits between kernel and user virtual addresses that alias a single frame, or alternatively how do you avoid the issue? }
+
+                We directly check the status of the corresponding kernel page, which should be the same as they are managed by the kernel, and an accessed/dirty kernel page means an accessed/dirty user page. 
         
         \subsection{Synchronization}
 
             \subsubsection{When two user processes both need a new frame at the same time, how are races avoided? }
+
+                A lock is set in the definition of a frame table lock. When allocating a frame and pushing it to the frame table, the global \texttt{frame\_table\_lock} is acquired, so the race condition can be avoided. 
         
         \subsection{Rationale}
             
             \subsubsection{Why did you choose the data structure(s) that you did for representing virtual-to-physical mappings? } 
+
+                Such a structure adds additional necessary information when not affecting the original function. This improves the stability of the SPT, and makes it convenient to implement memory mapped files and swap. 
     
     \section{Paging to and From Disk}
 
@@ -95,27 +128,134 @@
             
             \subsubsection{Copy here the declaration of each new or changed `\texttt{struct}' or `\texttt{struct}' member, global or static variable, `\texttt{typedef}', or enumeration. Identify the purpose of each in 25 words or less. } 
 
+                \begin{itemize}
+                    \item In file \texttt{vm/swap.c}
+\begin{verbatim}
+/* Store the info of swap slots */
+static struct bitmap *swap_bitmap;
+/* Swap block */
+static struct block *swap_block;
+/* Size of swap block */
+static size_t swap_size;
+\end{verbatim}
+                    \item In file \texttt{vm/page.h}
+\begin{verbatim}
+/* States of the pages in SPTE */
+enum state
+{
+    /* Zero page */
+    ALL_ZERO = 0,
+    /* Now on frame */ 
+    ON_FRAME = 1,
+    /* Now in swap */
+    IN_SWAP = 2,
+    /* Loaded from file, evict to file */
+    FROM_FILESYS = 3,
+    /* Loaded from file, evict to swap */
+    FROM_FILESYS_SEGMENTS = 4
+};
+
+/* Entries of supplemental page table */
+struct sup_page_table_entry
+{
+    /* Corresponding FTE */
+    struct frame_table_entry *fte;
+    
+    /* Owner thread */
+    struct thread *owner;
+    /* User virtual address */
+    void *user_vaddr;
+    /* Writable flag */
+    bool writable;
+    /* Current status of the page */
+    enum state status;
+
+    /* Last access time */
+    uint64_t access_time;
+    /* Dirty flag */
+    bool dirty;
+    /* Accessed flag */
+    bool accessed;
+
+    /* Swap index if swapped out */
+    size_t swap_index;
+
+    ...
+
+    /* List element */
+    struct list_elem elem;
+};
+\end{verbatim}
+                \item In file \texttt{thread/thread.h}
+\begin{verbatim}
+struct list
+{
+    ...
+    
+    /* Supplemental page table */
+    /* List of supplemental page tables */
+    struct list sup_page_table;
+    /* Lock of the list of SPT */
+    struct lock sup_page_table_lock;
+
+    ...
+}
+\end{verbatim}
+                \end{itemize}
+
         \subsection{Algorithms}
 
             \subsubsection{When a frame is required but none is free, some frame must be evicted.  Describe your code for choosing a frame to evict. } 
 
+                Function \texttt{find\_entry\_to\_evict()} is called when choosing a frame to evict. In this function, the list of frame table is sorted according to the access time of the corresponding entry in SPT, and then it returns the first elem, which has the smallest access time, so this implements the LRU policy. 
+
             \subsubsection{When a process P obtains a frame that was previously used by a process Q, how do you adjust the page table (and any other data structures) to reflect the frame Q no longer has? }
 
+                The old frame is cleared and freed after saved into the swap or file, and the address of this frame in its corresponding SPT entry is set to NULL to avoid collision. 
+                
+                Then we allocate a new frame table entry with a frame here, store it in the new SPT entry, and install it into the \texttt{pagedir} of the new thread when loading the page.  
+
             \subsubsection{Explain your heuristic for deciding whether a page fault for an invalid virtual address should cause the stack to be extended into the page that faulted. }
+
+                When a page fault occurs, we first dump the information of this fault. Then we look into the following flags:
+                
+                \begin{itemize}
+                    \item \texttt{not\_present}: Whether the fault is due to not present page in memory, or writing to a read-only page. In the former condition, we continue to check the following conditions; in the latter condition, we terminate the program if in user context. 
+                    \item \texttt{on\_stack}: Whether the fault address is a valid stack address. 
+                    \item \texttt{in\_frame}: Whether the fault address is extending the stack in order instead of directly jumping to another place. 
+                \end{itemize}
+
+                Only if both \texttt{on\_stack} and \texttt{on\_frame} are true, we extend the stack by allocating a new frame. 
         
         \subsection{Synchronization}
 
             \subsubsection{Explain the basics of your VM synchronization design.  In particular, explain how it prevents deadlock.  (Refer to the textbook for an explanation of the necessary conditions for deadlock.) }
 
+                A global lock of frame table \texttt{frame\_table\_lock} is set. Since all operations of the frame table shares one lock, the condition of circular wait cannot happen, and thus no deadlock here. 
+
             \subsubsection{A page fault in process P can cause another process Q's frame to be evicted.  How do you ensure that Q cannot access or modify the page during the eviction process?  How do you avoid a race between P evicting Q's frame and Q faulting the page back in? }
+
+                The very first thing during the eviction of a page is clear the page by using \texttt{pagedir\_clear\_page()}. After this is impelemented, Q cannot access this page until it is reloaded. 
+
+                Any changes on the frame table, including allocating new frames or evicting a frame, should be done with \texttt{frame\_table\_lock} acquired, so one cannot load back a page when a page is being evicted. 
 
             \subsubsection{Suppose a page fault in process P causes a page to be read from the file system or swap.  How do you ensure that a second process Q cannot interfere by e.g. attempting to evict the frame while it is still being read in? }
 
+                The \texttt{load\_page} also acquires the lock \\ \texttt{frame\_table\_lock}, so the page cannot be evicted before the loading process finished. 
+
             \subsubsection{Explain how you handle access to paged-out pages that occur during system calls.  Do you use page faults to bring in pages (as in user programs), or do you have a mechanism for `locking' frames into physical memory, or do you use some other design?  How do you gracefully handle attempted accesses to invalid virtual addresses? }
+                
+                This problem is firstly handled in syscall level, based on our implementation in project 2. The validation of address (buffers or strings) is cheched in wrapper functions, which ensure to avoid access to page-out pages.
+
+                Later even if the access falls into the page fault handler, we will validate the access to check whether it is a valid process, and grow the stack, fetch back the evicted page or terminate the program as in user programs. 
         
-        \subsubsection{Rationale}
+        \subsection{Rationale}
 
             \subsubsection{A single lock for the whole VM system would make synchronization easy, but limit parallelism.  On the other hand, using many locks complicates synchronization and raises the possibility for deadlock but allows for high parallelism.  Explain where your design falls along this continuum and why you chose to design it this way. }
+                
+                A \texttt{frame\_table\_lock} is created to deal with synchronization problem, which is used in functions such as allocation and free. This lock ensures that frame table can only be modified by only one thread at one time. Since the frame table is globally accessed, it is guaranteed by this single lock. 
+
+                For each page table, we still set a lock \texttt{sup\_page\_table\_lock} for each process. This lock guarantees that the access to supplemental page table is synchronized. 
     
     \section{Memory Mapped Files}
 
@@ -125,15 +265,93 @@
             
             \subsubsection{Copy here the declaration of each new or changed `\texttt{struct}' or `\texttt{struct}' member, global or static variable, `\texttt{typedef}', or enumeration. Identify the purpose of each in 25 words or less. } 
 
+            \begin{itemize}
+                \item In file \texttt{threads/thread.h}
+\begin{verbatim}
+struct thread
+{
+    ... 
+
+    /* Memory-mapped files */
+    /* Next identifier for mmap files */
+    mapid_t next_mapid;
+    /* List of memory-mapped files */
+    struct list mapped_files;
+};
+\end{verbatim}
+                \item In file \texttt{userprog/syscall.h}
+\begin{verbatim}
+/* Map region identifier. */
+typedef int mapid_t;
+/* Map failed identifier. */
+#define MAP_FAILED ((mapid_t) -1)
+
+...
+
+/* Mapped file entry point. */
+struct mapid_entry
+{
+    /* Mapped file */
+    struct file *file;
+    /* Length of mapped file */
+    size_t file_length;
+    /* Mapped file identifier */
+    mapid_t mapid;
+    /* Corresponding user virtual address */
+    void *user_vaddr;
+    /* Whether this mapid is freed */
+    bool freed;
+
+    /* List element */
+    struct list_elem elem;
+};
+\end{verbatim}
+                \item In file \texttt{vm/page.h}
+\begin{verbatim}
+struct sup_page_table_entry
+{
+    ...
+
+    /* For memory mapped files */
+    /* Mapped file */
+    struct file *file;
+    /* Offset in the file for this page */
+    off_t file_offset;
+    /* Bytes from data */
+    off_t file_bytes;
+    /* Bytes of extra zeros */
+    off_t zero_bytes;
+
+    ...
+};
+\end{verbatim}
+            \end{itemize}
+
         \subsection{Algorithms}
 
             \subsubsection{Describe how memory mapped files integrate into your virtual memory subsystem.  Explain how the page fault and eviction processes differ between swap pages and other pages. } 
 
+                A page that belongs to a memory mapped file is much the same as that of an allocated memory. Both of them needs a user virtual address, a frame (i.e. corresponding kernel page), various parameters, etc. The difference is that a SPT of a mapped file stores the info of the file, while a SPT of page in swap stores the \texttt{swap\_index}. 
+
+                We defined a special status of SPT: \texttt{FROM\_FILESYS}. Different from \texttt{IN\_SWAP}, when the information of this page is stored in a file instead of the swap, it will be set into this status, so when this page need to be loaded, the \texttt{load\_page()} will directly load the data in the file, instead of searching in the swap. 
+
+                The special identifier of a SPT of a memory-mapped file is that it stores the information of the file, which is in the \texttt{file} pointer of the SPT structure. When this is not \texttt{NULL}, data will be stored in this file and the status will be set to \texttt{FROM\_FILESYS}, but in a normal eviction process, the data are stored in the swap and the status is \texttt{IN\_SWAP}. 
+
+                \texttt{file\_offset} and \texttt{file\_bytes} are to locate the place in file of this page. By using this we can handle the situation where a file is mapped to multiple pages. 
+
             \subsubsection{Explain how you determine whether a new file mapping overlaps any existing segment. }
+
+                When mapping a file, we go through the pages from the given \texttt{addr} to \texttt{addr}+size of the file, stepping in \texttt{PGSIZE} and checking whether the user virtuall address exists in the SPT of this thread. If that exists, that means this memory is allocated to something else before, so we can detect that this file mapping overlaps an exsiting segement, and terminate the process due to violation. 
         
         \subsection{Rationale}
 
             \subsubsection{Mappings created with `\texttt{mmap}' have similar semantics to those of data demand-paged from executables, except that `\texttt{mmap}' mappings are written back to their original files, not to swap.  This implies that much of their implementation can be shared.  Explain why your implementation either does or does not share much of the code for the two situations. }
+
+                They share most of the code, but although they are all lazily loaded from file, the operations to handle them after loaded from file are different, so we defined a special SPT status \texttt{FROM\_FILESYS\_SEGMENTS} to record this state. 
+                
+                The page allocation process is the same between these two situations, except for the final state. To distinguish the behavior, when loading this page for the first time, we clear the file information for SPT with status \texttt{FROM\_FILESYS\_SEGMENTS}, which indicates that they are segments and should be written back to swap. 
+
+                Since most of the code is the same, we choose to share the code by nesting the functions. 
 
     \section{Survey Questions}
 
@@ -145,13 +363,23 @@
 
         \subsubsection*{In your opinion, was this assignment, or any one of the three problems in it, too easy or too hard? Did it take too long or too little time? }
 
+            Working on the functionality of a page is obviously more harder than we thought. Sometimes the program falls into a page fault with address \texttt{NULL} but GDB \texttt{backtrace} cannot trace before \texttt{intr\_entry()}, and that makes it really difficult to find the cause. 
+
         \subsubsection*{Did you find that working on a particular part of the assignment gave you greater insight into some aspect of OS design? }
+
+            The memory management method of this project differs a lot from other programs, giving us an new overview of memory from the OS side. The lazy load process is the most special one, as the memory allcation does not really allocate a piece of memory in real time. Meanwhile, swap and memory-mapped files also gives us a special look into how memory cooperates with files. 
 
         \subsubsection*{Is there some particular fact or hint we should give students in future quarters to help them solve the problems? Conversely, did you find any of our guidance to be misleading? }
 
+            Not yet. 
+
         \subsubsection*{Do you have any suggestions for the TAs to more effectively assist students, either for future quarters or the remaining projects? }
 
+            Not yet. 
+
         \subsubsection*{Any other comments? }
+
+            Not yet. 
     
     \section*{Contributors}
 
@@ -170,9 +398,9 @@
                     & Design Document & \checkmark & \checkmark & \checkmark \\
                 \hline
                 \multirow{4}{*}{\makecell{Task 2 \\ Paging to \\ and From Disk}} 
-                    & Concept & \checkmark & \checkmark & \checkmark \\
+                    & Concept & \checkmark & & \checkmark \\
                     \cline{2-5}
-                    & Implementation & \checkmark & \checkmark & \checkmark \\
+                    & Implementation & \checkmark & & \checkmark \\
                     \cline{2-5}
                     & Debugging & \checkmark & \checkmark & \checkmark \\
                     \cline{2-5}
@@ -181,7 +409,7 @@
                 \multirow{4}{*}{\makecell{Task 3 \\ Memory \\ Mapped Files}} 
                     & Concept & \checkmark & \checkmark & \checkmark \\
                     \cline{2-5}
-                    & Implementation & \checkmark & \checkmark & \checkmark \\
+                    & Implementation & & \checkmark & \\
                     \cline{2-5}
                     & Debugging & \checkmark & \checkmark & \checkmark \\
                     \cline{2-5}
