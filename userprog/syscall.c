@@ -81,8 +81,10 @@ static int syscall_inumber_wrapper (struct intr_frame *);
 /* File descriptor entry point */
 struct fd_entry
 {
-  struct file *file;
-  int fd;
+  struct file *file;        /* File of this entry point */
+  int fd;                   /* File descriptor */
+
+  /* List element */
   struct list_elem elem;
 };
 

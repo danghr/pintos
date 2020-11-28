@@ -146,13 +146,13 @@ struct thread
     bool is_waiting;
     struct thread* parent_thread;
 
-    /* List used to store supplemental page tables */
-    struct list sup_page_table;
-    struct lock sup_page_table_lock;
+    /* Supplemental page table */
+    struct list sup_page_table;         /* List of supplemental page tables */
+    struct lock sup_page_table_lock;    /* Lock of the list of SPT */
 
-    /* Identifier and list for memory-mapped files */
-    mapid_t next_mapid;
-    struct list mapped_files;
+    /* Memory-mapped files */
+    mapid_t next_mapid;                 /* Next identifier for mmap files */
+    struct list mapped_files;           /* List of memory-mapped files */
   };
 
 /* If false (default), use round-robin scheduler.

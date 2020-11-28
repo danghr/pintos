@@ -20,27 +20,27 @@ enum state
 /* Entries of supplemental page table */
 struct sup_page_table_entry
 {
-  struct frame_table_entry *fte;   /* Corresponding frame entry */
+  struct frame_table_entry *fte;  /* Corresponding FTE */
   
-  void *user_vaddr;         /* User virtual address of the page */
-  bool writable;
-  enum state status;
+  struct thread *owner;           /* Owner thread */
+  void *user_vaddr;               /* User virtual address */
+  bool writable;                  /* Writable flag */
+  enum state status;              /* Current status of the page */
 
-  struct thread *owner;
-
-  uint64_t access_time;     /* Record the last access time for LRU */
-  bool dirty;
-  bool accessed;
+  uint64_t access_time;           /* Last access time */
+  bool dirty;                     /* Dirty flag */
+  bool accessed;                  /* Accessed flag */
 
   /* For swap */
-  size_t swap_index;
+  size_t swap_index;              /* Swap index if swapped out */
 
   /* For memory mapped files */
-  struct file *file;
-  off_t file_offset;
-  off_t file_bytes;
-  off_t zero_bytes;
+  struct file *file;              /* Mapped file */
+  off_t file_offset;              /* Offset in the file for this page */
+  off_t file_bytes;               /* Bytes from data */
+  off_t zero_bytes;               /* Bytes of extra zeros */
 
+  /* List element */
   struct list_elem elem;
 };
 

@@ -18,11 +18,13 @@ typedef int mapid_t;
 /* Mapped file entry point */
 struct mapid_entry
 {
-  struct file *file;
-  size_t file_length;
-  mapid_t mapid;
-  void *user_vaddr;
-  bool freed;
+  struct file *file;    /* Mapped file */
+  size_t file_length;   /* Length of mapped file */
+  mapid_t mapid;        /* Mapped file identifier */
+  void *user_vaddr;     /* Corresponding user virtual address */
+  bool freed;           /* Whether this mapid is freed */
+
+  /* List element */
   struct list_elem elem;
 };
 

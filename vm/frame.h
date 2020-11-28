@@ -13,9 +13,11 @@ struct list frame_table;
 struct frame_table_entry
 {
   /* Entry of the supplemental page table */
-  void *frame;              /* Address of the frame */
-  struct sup_page_table_entry *spte;     /* Corresponding SPTE */
-  struct list_elem elem;    /* List element */
+  void *frame;                          /* Address of the frame */
+  struct sup_page_table_entry *spte;    /* Corresponding SPTE */
+
+  /* List element */
+  struct list_elem elem;
 };
 
 struct frame_table_entry *frame_find_entry (void *);
