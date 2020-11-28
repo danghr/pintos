@@ -11,10 +11,11 @@
 /* States of the supplemental page table entry */
 enum state
 {
-  ALL_ZERO = 0,
-  ON_FRAME = 1,
-  IN_SWAP = 2,
-  FROM_FILESYS = 3
+  ALL_ZERO = 0,                   /* Zero page */
+  ON_FRAME = 1,                   /* Now on frame */
+  IN_SWAP = 2,                    /* Now in swap */
+  FROM_FILESYS = 3,               /* Loaded from file, evict to file */
+  FROM_FILESYS_SEGMENTS = 4       /* Loaded from file, evict to swap */
 };
 
 /* Entries of supplemental page table */
@@ -66,7 +67,7 @@ sup_page_install_mmap_page (struct thread *t , void *uaddr,
 void sup_page_remove_mmap_page (struct thread *, void *);
 void sup_page_mmap_write_back (struct sup_page_table_entry *);
 bool load_page (struct thread *, void *);
-void 
+struct sup_page_table_entry *
 sup_page_allocate_mmap_page (struct thread *t UNUSED, void *uaddr, 
   struct file *f, off_t offset, uint32_t file_bytes, 
   uint32_t zero_bytes, bool writable);

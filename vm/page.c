@@ -118,7 +118,8 @@ void sup_page_free_spte (struct sup_page_table_entry *spte)
 {
   if(spte->status == ON_FRAME && spte->file != NULL)
     sup_page_write_page_mmap_to_filesys (spte, spte->fte->frame);
-  if (spte->status == ON_FRAME || spte->status == FROM_FILESYS)
+  if (spte->status == ON_FRAME || spte->status == FROM_FILESYS || 
+    spte->status == FROM_FILESYS_SEGMENTS)
     frame_free_fte (spte->fte);
   if(spte->status == IN_SWAP)
     swap_free(spte->swap_index);
@@ -217,8 +218,22 @@ sup_page_write_page_mmap_to_filesys (struct sup_page_table_entry *spte,
 
 /* Load data as a page from file. 
    Used when loading segments. */
-struct sup_page_table_entry*
+struct sup_page_table_entry *
 sup_page_install_mmap_page (struct thread *t, void *uaddr, 
+  struct file *f, off_t offset, uint32_t file_bytes, 
+  uint32_t zero_bytes, bool writable)
+{
+  ASSERT (file_bytes + zero_bytes == PGSIZE);
+  struct sup_page_table_entry *spte = sup_page_allocate_mmap_page (t, 
+    uaddr, f, offset, file_bytes, zero_bytes, writable);
+  spte->status = FROM_FILESYS_SEGMENTS;
+  return spte;
+}
+
+/* Load data as a page from file. 
+   Used when mapping file to memory. */
+struct sup_page_table_entry *
+sup_page_allocate_mmap_page (struct thread *t, void *uaddr, 
   struct file *f, off_t offset, uint32_t file_bytes, 
   uint32_t zero_bytes, bool writable)
 {
@@ -240,17 +255,6 @@ sup_page_install_mmap_page (struct thread *t, void *uaddr,
   spte->access_time = timer_ticks ();
   sup_push_to_table (t, spte);
   return spte;
-}
-
-/* Load data as a page from file. 
-   Used when mapping file to memory. */
-void 
-sup_page_allocate_mmap_page (struct thread *t UNUSED, void *uaddr, 
-  struct file *f, off_t offset, uint32_t file_bytes, 
-  uint32_t zero_bytes, bool writable)
-{
-  sup_page_install_mmap_page (t, uaddr, f, offset, file_bytes, 
-    zero_bytes, writable);
 }
 
 /* Remove the given page for memory mapped file with the given information */
@@ -311,6 +315,22 @@ load_page (struct thread *curr, void* vaddr)
           return false;
         }
       writable = spte->writable;
+      break;
+    
+    case FROM_FILESYS_SEGMENTS:
+      /* Load the content of corresponding file */
+      if (!sup_page_load_page_mmap_from_filesys (spte, frame))
+        {
+          /* Free the page if not succeess */
+          sup_page_free_spte (spte);
+          return false;
+        }
+      writable = spte->writable;
+
+      /* Clear the file info so they can be stroed in swap if evicted */
+      spte->file = NULL;
+      spte->file_bytes = 0;
+      spte->file_offset = 0;
       break;
   }
   pagedir_set_page(pagedir,vaddr,frame,writable);
