@@ -255,7 +255,8 @@ void process_exit (void)
          directory before destroying the process's page
          directory, or our active page directory will be one
          that's been freed (and cleared). */
-    /* Re-allow writes to the executable */
+    
+    /* Clear the mapped files */
     if (!list_empty (&(cur->mapped_files)))
       {
         for (struct list_elem *e = list_begin (&(cur->mapped_files));
@@ -263,13 +264,18 @@ void process_exit (void)
           {
             struct mapid_entry *mapid_e = list_entry 
               (e, struct mapid_entry, elem);
-            struct sup_page_table_entry *spte = sup_page_find_entry_uaddr 
-              (cur, mapid_e->user_vaddr);
-            if (spte == NULL)
-              continue;
+            for (size_t i = 0; i < mapid_e->file_length; i += PGSIZE) 
+            {
+              void *addr_to_unmap = mapid_e->user_vaddr + i;
+              struct sup_page_table_entry *spte = 
+                sup_page_find_entry_uaddr (cur, addr_to_unmap);
+              if (spte->status == ON_FRAME)
             sup_page_write_page_mmap_to_filesys (spte, spte->fte->frame);
           }
       }
+      }
+    
+    /* Re-allow writes to the executable */
     if (cur->executing_file != NULL) {
       file_close (cur->executing_file);
     }
