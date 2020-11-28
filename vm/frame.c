@@ -91,9 +91,19 @@ frame_allocate_page
     {
       struct frame_table_entry *fte_to_evict = find_entry_to_evict ();
       struct sup_page_table_entry *spte_correspond = fte_to_evict->spte;
-      size_t swap_index = store_in_swap (fte_to_evict->frame);
-      spte_correspond->status = IN_SWAP;
-      spte_correspond->swap_index = swap_index;
+      
+      if (spte_correspond->file == NULL)
+        {
+          size_t swap_index = store_in_swap (fte_to_evict->frame);
+          spte_correspond->status = IN_SWAP;
+          spte_correspond->swap_index = swap_index;
+        }
+      else
+        {
+          sup_page_write_page_mmap_to_filesys (spte_correspond, 
+            fte_to_evict->frame);
+          spte_correspond->status = FROM_FILESYS;
+        }
       
       frame_free_fte (fte_to_evict);
       f = palloc_get_page (flags);
