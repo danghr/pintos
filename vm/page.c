@@ -216,8 +216,7 @@ sup_page_write_page_mmap_to_filesys (struct sup_page_table_entry *spte,
 }
 
 /* Load data as a page from file. 
-   Used when loading the segments when starting a process. 
-   NO lazy load, should NOT be used on mmap. */
+   Used when loading segments. */
 struct sup_page_table_entry*
 sup_page_install_mmap_page (struct thread *t, void *uaddr, 
   struct file *f, off_t offset, uint32_t file_bytes, 
@@ -225,35 +224,8 @@ sup_page_install_mmap_page (struct thread *t, void *uaddr,
 {
   ASSERT (file_bytes + zero_bytes == PGSIZE);
 
-  struct sup_page_table_entry *spte = sup_page_allocate_page (PAL_USER);
-  spte->owner = t;
-  spte->user_vaddr = uaddr;
-
-  /* Set the position of read */
-  file_seek (f, offset);
-
-  /* Read bytes from the file and store in the frame */
-  off_t n_read = file_read (f, spte->fte->frame, file_bytes);
-  if(n_read != (off_t) file_bytes)
-    return false;
-
-  /* Remaining bytes are still zero
-     Write them in the frame */
-  memset (spte->fte->frame + n_read, 0, zero_bytes);
-
-  pagedir_set_page (t->pagedir, uaddr, spte->fte->frame, writable);
-  spte->status = ON_FRAME;
-  spte->access_time = timer_ticks ();
-  return spte;
-}
-
-/* Insert a new page for memory mapped file with the given information. */
-void 
-sup_page_allocate_mmap_page (struct thread *t UNUSED, void *uaddr, 
-  struct file *f, off_t offset, uint32_t file_bytes, 
-  uint32_t zero_bytes, bool writable)
-{
-  struct sup_page_table_entry *spte = malloc(sizeof(struct sup_page_table_entry));
+  struct sup_page_table_entry *spte = malloc (
+    sizeof (struct sup_page_table_entry));
 
   spte->owner = t;
   spte->user_vaddr = uaddr;
@@ -267,6 +239,18 @@ sup_page_allocate_mmap_page (struct thread *t UNUSED, void *uaddr,
   spte->writable = writable;
   spte->access_time = timer_ticks ();
   sup_push_to_table (t, spte);
+  return spte;
+}
+
+/* Load data as a page from file. 
+   Used when mapping file to memory. */
+void 
+sup_page_allocate_mmap_page (struct thread *t UNUSED, void *uaddr, 
+  struct file *f, off_t offset, uint32_t file_bytes, 
+  uint32_t zero_bytes, bool writable)
+{
+  sup_page_install_mmap_page (t, uaddr, f, offset, file_bytes, 
+    zero_bytes, writable);
 }
 
 /* Remove the given page for memory mapped file with the given information */
