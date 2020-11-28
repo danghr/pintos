@@ -17,12 +17,10 @@ static struct lock frame_table_lock;
 static void
 frame_push_to_table (struct frame_table_entry *fte)
 {
+  ASSERT (lock_held_by_current_thread (&frame_table_lock));
   ASSERT (!in_list (&(fte->elem), &frame_table));
 
-  if (!lock_held_by_current_thread (&frame_table_lock))
-    lock_acquire (&frame_table_lock);
   list_push_back (&frame_table, &(fte->elem));
-  lock_release (&frame_table_lock);
 }
 
 /* Find the corresponding frame table according to the given PAGE. 
@@ -79,6 +77,13 @@ frame_allocate_page
           flags == (PAL_ASSERT | PAL_USER) ||
           flags == (PAL_ZERO | PAL_ASSERT | PAL_USER));
   
+  bool lock_flag = false;
+  if (!lock_held_by_current_thread (&frame_table_lock))
+    {
+      lock_acquire (&frame_table_lock);
+      lock_flag = true;
+    }
+  
   /* Try to allocate a page */
   void *f = palloc_get_page (flags);
   /* If allocate not success */
@@ -86,15 +91,9 @@ frame_allocate_page
     {
       struct frame_table_entry *fte_to_evict = find_entry_to_evict ();
       struct sup_page_table_entry *spte_correspond = fte_to_evict->spte;
-      if(spte_correspond->file != NULL && (spte_correspond->writable == false || spte_correspond->dirty == false))
-      {
-        spte_correspond->status = FROM_FILESYS;
-      }
-      else{
-        size_t swap_index = store_in_swap (fte_to_evict->frame);
-        spte_correspond->status = IN_SWAP;
-        spte_correspond->swap_index = swap_index;
-      }
+      size_t swap_index = store_in_swap (fte_to_evict->frame);
+      spte_correspond->status = IN_SWAP;
+      spte_correspond->swap_index = swap_index;
       
       frame_free_fte (fte_to_evict);
       f = palloc_get_page (flags);
@@ -106,6 +105,9 @@ frame_allocate_page
   fte->frame = f;
   fte->spte = spte;
   frame_push_to_table (fte);
+  
+  if (lock_held_by_current_thread (&frame_table_lock) && lock_flag)
+    lock_release (&frame_table_lock);
   return fte;
 }
 
@@ -114,6 +116,12 @@ frame_allocate_page
 void
 frame_free_fte (struct frame_table_entry *fte)
 {
+  bool lock_flag = false;
+  if (!lock_held_by_current_thread (&frame_table_lock))
+    {
+      lock_acquire (&frame_table_lock);
+      lock_flag = true;
+    }
   pagedir_clear_page (fte->spte->owner->pagedir, fte->spte->user_vaddr);
   if (!lock_held_by_current_thread (&frame_table_lock))
     lock_acquire (&frame_table_lock);
@@ -122,6 +130,8 @@ frame_free_fte (struct frame_table_entry *fte)
   palloc_free_page (fte->frame);
   fte->spte->fte = NULL;
   free (fte);
+  if (lock_held_by_current_thread (&frame_table_lock) && lock_flag)
+    lock_release (&frame_table_lock);
 }
 
 /* Free the given frame table entry according to the given PAGE */
