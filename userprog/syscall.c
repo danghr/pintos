@@ -13,9 +13,6 @@
 #include "devices/shutdown.h"
 #include "devices/intq.h"
 #include "devices/input.h"
-#include "vm/frame.h"
-#include "vm/page.h"
-#include "vm/swap.h"
 
 static void syscall_handler (struct intr_frame *);
 
@@ -42,7 +39,7 @@ int syscall_close (int);
 
 /* Project 3 and optionally project 4. */
 mapid_t syscall_mmap (int, void *);
-int syscall_munmap (mapid_t);
+void syscall_munmap (mapid_t);
 
 /* Project 4 only. */
 bool syscall_chdir (const char *);
@@ -81,10 +78,8 @@ static int syscall_inumber_wrapper (struct intr_frame *);
 /* File descriptor entry point */
 struct fd_entry
 {
-  struct file *file;        /* File of this entry point */
-  int fd;                   /* File descriptor */
-
-  /* List element */
+  struct file *file;
+  int fd;
   struct list_elem elem;
 };
 
@@ -109,62 +104,6 @@ get_fd_entry (int fd)
         return list_entry (e, struct fd_entry, elem);
     }
   return NULL;
-}
-
-/* Allocate new mappid file identifier in the thread */
-static int
-allocate_mapid (struct thread *t)
-{
-  return (t->next_mapid)++;
-}
-
-/* Get the entry point in current thread according to mapid
-   Returns the address of the fd_entry if found, 
-   NULL if not found */
-static struct mapid_entry *
-get_mapid_entry (mapid_t mapid)
-{
-  struct list *mapid_list = &(thread_current ()->mapped_files);
-  for (struct list_elem *e = list_begin (mapid_list); 
-    e != list_end (mapid_list); e = e->next)
-    {
-      if (list_entry (e, struct mapid_entry, elem)->mapid == mapid)
-        return list_entry (e, struct mapid_entry, elem);
-    }
-  return NULL;
-}
-
-/* Kill the program which is violating the system */
-void
-terminate_program (int exit_status)
-{
-  thread_current ()->exit_status = exit_status;
-  thread_exit ();
-}
-
-/* Verify that a memory address is valid in user program */
-static bool
-is_valid_addr (const void *uaddr)
-{
-  if (!is_user_vaddr (uaddr))
-    return false;
-  return true;
-}
-
-/* Check whether an address is a string. */
-bool 
-check_the_string (void *str)
-{
-  while (is_valid_addr(str))
-    {
-      if (*(char *)str == '\0')
-        break;
-      (char*)str++;
-    }
-  if (is_valid_addr (str))
-    return true;
-  else
-    return false;
 }
 
 void
@@ -193,18 +132,37 @@ syscall_init (void)
   syscall_handler_wrapper[SYS_INUMBER] = &syscall_inumber_wrapper;
 }
 
+/* Kill the program which is violating the system */
+void
+terminate_program (int exit_status)
+{
+  thread_current ()->exit_status = exit_status;
+  thread_exit ();
+}
+
+/* Verify that a memory address is valid in user program */
+static bool
+is_valid_addr (const void *uaddr)
+{
+  if (!is_user_vaddr (uaddr))
+    return false;
+  if (pagedir_get_page (thread_current ()->pagedir, uaddr) 
+    == NULL)
+    return false;
+  return true;
+}
+
 /* System call handler.
    Retrieve the system call number and send it to correct
    wrappers. */
 static void
 syscall_handler (struct intr_frame *f) 
-{  
+{
   if (!is_valid_addr (f->esp + 4))
     terminate_program (-1);
   
   /* System call number is saved in stack pointer (f->esp).
      See section 3.5.2 in the doc for details. */
-  thread_current()->curr_esp = f->esp;
   int syscall_num = *(int*)(f->esp);
   int wrapper_return;
   /* Check whether correct syscall num is correct */
@@ -254,6 +212,7 @@ syscall_halt (void)
 void
 syscall_exit (int status)
 {
+
   terminate_program (status);
 }
 
@@ -440,128 +399,12 @@ syscall_close (int fd)
   struct fd_entry *fd_e = get_fd_entry (fd);
   if (fd_e == NULL)
     return -1;
-  lock_acquire (&file_lock);  /* Problem here */
+  lock_acquire (&file_lock);
   file_close (fd_e->file);
   lock_release (&file_lock);
 
   list_remove (&(fd_e->elem));
   free (fd_e);
-  return 0;
-}
-
-/* Project 3 and optionally Project 4. */
-
-/* Maps the file open as FD into the process's virtual address space. 
-   The entire file is mapped into consecutive virtual pages starting 
-   at ADDR. 
-   Return the mapid if succeeds, or -1 if fails. */
-mapid_t 
-syscall_mmap (int fd, void *addr)
-{
-  /* Handel illegal address */
-  if (addr == NULL || pg_ofs (addr) != 0)
-    return -1;
-  if (!is_user_vaddr (addr))
-    return -1;
-  if (pagedir_get_page (thread_current ()->pagedir, addr) != NULL)
-    return -1;
-  /* Handle illegal file descriptor */
-  if (fd < 3)
-    return -1;
-  struct fd_entry *fd_e = get_fd_entry (fd);
-  if (fd_e == NULL)
-    return -1;
-  /* Allocate space for mapid entry */
-  struct mapid_entry *mapid_e = malloc (sizeof (struct mapid_entry));
-  if (mapid_e == NULL)
-    return -1;
-  
-  struct thread *t = thread_current ();
-  lock_acquire (&file_lock);
-
-  /* Reopen file */
-  struct file *f = file_reopen (fd_e->file);
-  if (f == NULL)
-    goto SYSCALL_MMAP_FAIL;
-  
-  /* Get the length of the file */
-  size_t f_len = file_length (f);
-  if (f_len == 0)
-    goto SYSCALL_MMAP_FAIL;
-  
-  /* Check that all page address are not mapped already */
-  for (size_t i = 0; i < f_len; i += PGSIZE)
-    {
-      void *addr_to_test = addr + i;
-      if (sup_page_find_entry_uaddr (t, addr_to_test) != NULL)
-        goto SYSCALL_MMAP_FAIL;
-    }
-  
-  /* Allocate memory */
-  for (size_t i = 0; i < f_len; i += PGSIZE)
-    {
-      void *addr_to_map = addr + i;
-      size_t file_bytes, zero_bytes;
-
-      /* Record bytes mapped to the file and additional zeros */
-      if (i + PGSIZE < f_len)
-        {
-          file_bytes = PGSIZE;
-          zero_bytes = 0;
-        }
-      else
-        {
-          file_bytes = f_len - i;
-          zero_bytes = PGSIZE - (f_len - i);
-        }
-      sup_page_allocate_mmap_page (t, addr_to_map, f, i, file_bytes, 
-        zero_bytes, true);
-    }
-  
-  /* Allocate mapid and put into the mapped list */
-  mapid_t mapid = allocate_mapid (t);
-  mapid_e->file = f;
-  mapid_e->mapid = mapid;
-  mapid_e->file_length = f_len;
-  mapid_e->user_vaddr = addr;
-  mapid_e->freed = false;
-  list_push_back (&(t->mapped_files), &(mapid_e->elem));
-  lock_release (&file_lock);
-  return mapid;
-
-SYSCALL_MMAP_FAIL:
-  /* Handle failure */
-  lock_release (&file_lock);
-  return -1;
-}
-
-/* Unmaps the mapping designated by mapping, which must be a mapping ID 
-   returned by a previous call to mmap by the same process that has not 
-   yet been unmapped. 
-   To let the wrapper detect success/failure, return -1 if fails and 0
-   otherwise. */
-int
-syscall_munmap (mapid_t mapping)
-{
-  struct mapid_entry *mapid_e = get_mapid_entry (mapping);
-  if (mapid_e == NULL)
-    return -1;
-  
-  struct thread *t = thread_current ();
-  lock_acquire (&file_lock);
-
-  /* Iterate through each mapped page */
-  size_t file_size = mapid_e->file_length;
-  for (size_t i = 0; i < file_size; i += PGSIZE) {
-    void *addr_to_unmap = mapid_e->user_vaddr + i;
-    sup_page_remove_mmap_page (t, addr_to_unmap);
-  }
-
-  /* Remove the item from the list */
-  list_remove (&(mapid_e->elem));
-  file_close (mapid_e->file);
-  free (mapid_e);
-  lock_release (&file_lock);
   return 0;
 }
 
@@ -597,7 +440,19 @@ syscall_exit_wrapper (struct intr_frame *f)
   syscall_exit (status);
   return 0;
 }
-
+bool 
+check_the_string(void *str){
+  while(is_valid_addr(str))
+  {
+    if(*(char *)str == '\0')
+      break;
+    (char*)str++;
+  }
+  if(is_valid_addr(str))
+    return true;
+  else
+    return false;
+}
 static int
 syscall_exec_wrapper (struct intr_frame *f)
 {
@@ -723,13 +578,10 @@ syscall_read_wrapper (struct intr_frame *f)
   void *buffer = *(char**)(f->esp + 8);
   unsigned length = *((unsigned*)(f->esp + 12));
 
-  if (buffer == NULL)
+  if (buffer == NULL || !is_valid_addr(buffer + length ))
   {
     terminate_program(-1);
   }
-
-  if (!is_valid_addr (buffer))
-    terminate_program (-1);
 
   /* Write the return value */
   f->eax = syscall_read (fd, buffer, length);
@@ -739,6 +591,7 @@ syscall_read_wrapper (struct intr_frame *f)
 static int
 syscall_write_wrapper (struct intr_frame *f)
 {
+  // printf("esp:%d, base:%d, diff:%d \n",(unsigned)f->esp, (unsigned)PHYS_BASE, (unsigned)PHYS_BASE - (unsigned)f->esp);
   /* Validate memory address */
   for (int i = 1; i <= 4; i++)
     if (!is_valid_addr ((void*)(((char *)f->esp + 4 * i))))
@@ -748,17 +601,15 @@ syscall_write_wrapper (struct intr_frame *f)
   int fd = *((int*)(f->esp + 4));
   void *buffer = *(char**)(f->esp + 8);
   unsigned length = *((unsigned*)(f->esp + 12));
-  if (buffer == NULL)
-    terminate_program(-1);
-
-  if (!is_valid_addr (buffer))
-    terminate_program (-1);
+  if (buffer == NULL || !is_valid_addr((char *) buffer + length))
+  {
+    return -1;
+  }
 
   /* Write the return value */
   f->eax = syscall_write (fd, buffer, length);
   return 0;
 }
-
 static int
 syscall_seek_wrapper (struct intr_frame *f)
 {
@@ -810,35 +661,15 @@ syscall_close_wrapper (struct intr_frame *f)
 /* Project 3 and optionally project 4. */
 
 static int
-syscall_mmap_wrapper (struct intr_frame *f)
+syscall_mmap_wrapper (struct intr_frame *f UNUSED)
 {
-  /* Validate memory address */
-  for (int i = 1; i <= 3; i++)
-    if (!is_valid_addr ((void*)(f->esp + i * 4)))
-      return -1;
-  
-  /* Decode parameters */
-  int fd = *((int*)(f->esp + 4));
-  void *addr = *((void**)(f->esp + 8));
-
-  /* Execute the function */
-  f->eax = syscall_mmap (fd, addr);
-  return 0;
+  return -1;
 }
 
 static int
-syscall_munmap_wrapper (struct intr_frame *f)
+syscall_munmap_wrapper (struct intr_frame *f UNUSED)
 {
-  /* Validate memory address */
-  for (int i = 1; i <= 3; i++)
-    if (!is_valid_addr ((void*)(f->esp + i * 4)))
-      return -1;
-  
-  /* Decode parameters */
-  mapid_t mapid = *((int*)(f->esp + 4));
-
-  /* Execute the function */
-  return syscall_munmap (mapid);
+  return -1;
 }
 
 /* Project 4 only. */

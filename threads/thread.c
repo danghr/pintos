@@ -13,8 +13,6 @@
 #include "threads/vaddr.h"
 #ifdef USERPROG
 #include "userprog/process.h"
-#include "vm/frame.h"
-#include "vm/page.h"
 #endif
 
 /* Random value for struct thread's `magic' member.
@@ -96,7 +94,6 @@ thread_init (void)
   lock_init (&file_lock);
   list_init (&ready_list);
   list_init (&all_list);
-  frame_table_init ();
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -476,18 +473,15 @@ init_thread (struct thread *t, const char *name, int priority)
   intr_set_level (old_level);
 
   t->next_fd = 3;
-  t->next_mapid = 1;
   t->exit_status = -1;
   list_init (&(t->child_threads_list));
   list_init (&(t->opened_files));
   list_init (&(t->waiting));
-  list_init (&(t->mapped_files));
   t->is_exited = false;
   t->is_waited = false;
   t->is_waiting = false;
   t->executing_file = NULL;
-  list_init (&(t->sup_page_table));
-  lock_init (&(t->sup_page_table_lock));
+  t->exit_status = -1;
 }
 
 static void init_thread_child (struct thread* t, struct thread* parent)

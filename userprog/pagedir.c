@@ -2,12 +2,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
-#include "devices/timer.h"
 #include "threads/init.h"
 #include "threads/pte.h"
 #include "threads/palloc.h"
-#include "vm/page.h"
-#include "vm/frame.h"
 
 static uint32_t *active_pd (void);
 static void invalidate_pagedir (uint32_t *);
@@ -36,8 +33,7 @@ pagedir_destroy (uint32_t *pd)
     return;
   /* Use Assert to make sure not destroy the init_page_dir. --ZTY */
   ASSERT (pd != init_page_dir);
-  for (pde = pd; 
-    pde < pd + pd_no (PHYS_BASE); pde++)
+  for (pde = pd; pde < pd + pd_no (PHYS_BASE); pde++)
     if (*pde & PTE_P) 
       {
         uint32_t *pt = pde_get_pt (*pde);
@@ -103,7 +99,6 @@ bool
 pagedir_set_page (uint32_t *pd, void *upage, void *kpage, bool writable)
 {
   uint32_t *pte;
-  struct sup_page_table_entry *spte;
 
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (pg_ofs (kpage) == 0);
@@ -112,15 +107,11 @@ pagedir_set_page (uint32_t *pd, void *upage, void *kpage, bool writable)
   ASSERT (pd != init_page_dir);
 
   pte = lookup_page (pd, upage, true);
-  spte = sup_page_find_entry_frame (thread_current (), kpage);
 
-  if (pte != NULL && spte != NULL) 
+  if (pte != NULL) 
     {
       ASSERT ((*pte & PTE_P) == 0);
       *pte = pte_create_user (kpage, writable);
-      /* Record info of SPTE when setting the page */
-      spte->user_vaddr = upage;
-      spte->writable = writable;
       return true;
     }
   else
@@ -139,13 +130,8 @@ pagedir_get_page (uint32_t *pd, const void *uaddr)
   ASSERT (is_user_vaddr (uaddr));
   
   pte = lookup_page (pd, uaddr, false);
-  if (pte != NULL && (*pte & PTE_P) != 0) 
-    {
-      sup_page_find_entry_frame 
-        (thread_current (), pte_get_page (*pte))
-        ->access_time = timer_ticks ();
-      return pte_get_page (*pte) + pg_ofs (uaddr);
-    }
+  if (pte != NULL && (*pte & PTE_P) != 0)
+    return pte_get_page (*pte) + pg_ofs (uaddr);
   else
     return NULL;
 }
