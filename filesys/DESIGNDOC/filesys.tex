@@ -1,0 +1,206 @@
+% VLDB template version of 2020-03-05 enhances the ACM template, version 1.7.0:
+% https://www.acm.org/publications/proceedings-template
+% The ACM Latex guide provides further information about the ACM template
+
+\documentclass[sigconf, nonacm, balance=false, urlbreakonhyphens=true]{acmart}
+\usepackage{amsmath, amsfonts, amsthm}
+\usepackage{url}
+\usepackage{makecell}
+\usepackage{multirow}
+\usepackage{longtable}
+\usepackage{verbatim}
+\usepackage{hyperref}
+
+% Allow URL Breakline
+\def\UrlBreaks{\do\A\do\B\do\C\do\D\do\E\do\F\do\G\do\H\do\I\do\J
+\do\K\do\L\do\M\do\N\do\O\do\P\do\Q\do\R\do\S\do\T\do\U\do\V
+\do\W\do\X\do\Y\do\Z\do\[\do\\\do\]\do\^\do\_\do\`\do\a\do\b
+\do\c\do\d\do\e\do\f\do\g\do\h\do\i\do\j\do\k\do\l\do\m\do\n
+\do\o\do\p\do\q\do\r\do\s\do\t\do\u\do\v\do\w\do\x\do\y\do\z
+\do\.\do\@\do\\\do\/\do\!\do\_\do\|\do\;\do\>\do\]\do\)\do\,
+\do\?\do\'\do+\do\=\do\#}
+
+\begin{document}
+    \title{CS 130 Project 4: File Systems\\Design Document}
+
+    %%
+    %% The "author" command and its associated commands are used to define the authors and their affiliations.
+    \author{Tianyi Zhang}
+    \affiliation{%
+        \state{2018533074}
+    }
+    \email{zhangty2@shanghaitech.edu.cn}
+
+    \author{Haoran Dang}
+    \affiliation{%
+        \state{2018533259}
+    }
+    \email{danghr@shanghaitech.edu.cn}
+
+    \author{Derun Li}
+    \affiliation{%
+        \state{2018533152}
+    }
+    \email{lidr@shanghaitech.edu.cn}
+
+    \maketitle
+
+    \setcounter{section}{-1}
+
+    \section{Preliminaries}
+        %%
+        %% If you have any preliminary comments on your submission, notes for the
+        %% TAs, or extra credit, please give them here.
+        \subsection{Preliminary Comments}
+
+        No preliminary comment for this project. 
+
+        %%
+        %% Please cite any offline or online sources you consulted while
+        %% preparing your submission, other than the Pintos documentation, course
+        %% text, lecture notes, and course staff.
+        \subsection{References}
+        
+            \begin{itemize}
+                \item Pintos Guide by Stephen Tsung-Han Sher:  \url{https://static1.squarespace.com/static/5b18aa0955b02c1de94e4412/t/5e1bb4809e4b0a78012be132/1578874001361/Sher\%282016%29_Pintos_Guide}
+            \end{itemize} 
+    
+    \section{Indexed and Extensible Files}
+            
+        \label{Indexed and Extensible Files}
+    
+        \subsection{Data Structures}
+        
+            \subsubsection{Copy here the declaration of each new or changed `\texttt{struct}' or `\texttt{struct}' member, global or static variable, `\texttt{typedef}', or enumeration. Identify the purpose of each in 25 words or less. }
+        
+                \begin{itemize}
+                    \item In file \texttt{}
+\begin{verbatim}
+\end{verbatim}
+                \end{itemize}
+            
+            \subsubsection{What is the maximum size of a file supported by your inode structure?  Show your work. }
+        
+        \subsection{Synchronization}
+
+            \subsubsection{Explain how your code avoids a race if two processes attempt to extend a file at the same time. }
+
+            \subsubsection{Suppose processes A and B both have file F open, both positioned at end-of-file.  If A reads and B writes F at the same time, A may read all, part, or none of what B writes.  However, A may not read data other than what B writes, e.g. if B writes nonzero data, A is not allowed to see all zeros.  Explain how your code avoids this race. }
+
+            \subsubsection{Explain how your synchronization design provides "fairness".  File access is "fair" if readers cannot indefinitely block writers or vice versa.  That is, many processes reading from a file cannot prevent forever another process from writing the file, and many processes writing to a file cannot prevent another process forever from reading the file. }
+        
+        \subsection{Rationale}
+            
+            \subsubsection{Is your \texttt{inode} structure a multilevel index?  If so, why did you choose this particular combination of direct, indirect, and doubly indirect blocks?  If not, why did you choose an alternative \texttt{}{inode} structure, and what advantages and disadvantages does your structure have, compared to a multilevel index? } 
+    
+    \section{Subdirectories}
+
+        \label{Subdirectories}
+
+        \subsection{Data Structures}
+        
+            \subsubsection{Copy here the declaration of each new or changed `\texttt{struct}' or `\texttt{struct}' member, global or static variable, `\texttt{typedef}', or enumeration. Identify the purpose of each in 25 words or less. }
+    
+                \begin{itemize}
+                    \item In file \texttt{}
+\begin{verbatim}
+\end{verbatim}
+                \end{itemize}
+
+        \subsection{Algorithms}
+
+            \subsubsection{Describe your code for traversing a user-specified path.  How do traversals of absolute and relative paths differ? } 
+        
+        \subsection{Synchronization}
+
+            \subsubsection{How do you prevent races on directory entries?  For example, only one of two simultaneous attempts to remove a single file should succeed, as should only one of two simultaneous attempts to create a file with the same name, and so on. }
+
+            \subsubsection{Does your implementation allow a directory to be removed if it is open by a process or if it is in use as a process's current working directory?  If so, what happens to that process's future file system operations?  If not, how do you prevent it? }
+        
+        \subsection{Rationale}
+
+            \subsubsection{Explain why you chose to represent the current directory of a process the way you did. }
+    
+    \section{Buffer Cache}
+
+        \label{Buffer Cache}
+
+        \subsection{Data Structures}
+            
+            \subsubsection{Copy here the declaration of each new or changed `\texttt{struct}' or `\texttt{struct}' member, global or static variable, `\texttt{typedef}', or enumeration. Identify the purpose of each in 25 words or less. }
+    
+            \begin{itemize}
+                \item In file \texttt{}
+\begin{verbatim}
+\end{verbatim}
+            \end{itemize}
+
+        \subsection{Algorithms}
+
+            \subsubsection{Describe how your cache replacement algorithm chooses a cache block to evict. } 
+
+            \subsubsection{Describe your implementation of write-behind. }
+
+            \subsubsection{Describe your implementation of read-ahead. }
+        
+        \subsection{Rationale}
+
+            \subsubsection{When one process is actively reading or writing data in a buffer cache block, how are other processes prevented from evicting that block? }
+
+    \section{Survey Questions}
+
+        % Answering these questions is optional, but it will help us improve the
+        % course in future quarters.  Feel free to tell us anything you
+        % want--these questions are just to spur your thoughts.  You may also
+        % choose to respond anonymously in the course evaluations at the end of
+        % the quarter.
+
+        \subsubsection*{In your opinion, was this assignment, or any one of the three problems in it, too easy or too hard? Did it take too long or too little time? }
+
+        \subsubsection*{Did you find that working on a particular part of the assignment gave you greater insight into some aspect of OS design? }
+
+        \subsubsection*{Is there some particular fact or hint we should give students in future quarters to help them solve the problems? Conversely, did you find any of our guidance to be misleading? }
+
+        \subsubsection*{Do you have any suggestions for the TAs to more effectively assist students, either for future quarters or the remaining projects? }
+
+        \subsubsection*{Any other comments? }
+    
+    \section*{Contributors}
+
+        \begin{center}
+            \begin{tabular}{|c|c|c|c|c|}
+                \hline
+                \multicolumn{2}{|c|}{Task} & \makecell{Tianyi\\Zhang} & \makecell{Haoran\\Dang} & \makecell{Derun\\Li} \\
+                \hline
+                \multirow{4}{*}{\makecell{Task 1 \\ Indexed and \\ Extensible \\ Files}} 
+                    & Concept & \checkmark & \checkmark & \checkmark \\
+                    \cline{2-5}
+                    & Implementation & \checkmark & \checkmark & \checkmark \\
+                    \cline{2-5}
+                    & Debugging & \checkmark & \checkmark & \checkmark \\
+                    \cline{2-5}
+                    & Design Document & \checkmark & \checkmark & \checkmark \\
+                \hline
+                \multirow{4}{*}{\makecell{Task 2 \\ Subdirector-\\ies}} 
+                    & Concept & \checkmark & \checkmark & \checkmark \\
+                    \cline{2-5}
+                    & Implementation & \checkmark & \checkmark & \checkmark \\
+                    \cline{2-5}
+                    & Debugging & \checkmark & \checkmark & \checkmark \\
+                    \cline{2-5}
+                    & Design Document & \checkmark & \checkmark & \checkmark \\
+                \hline
+                \multirow{4}{*}{\makecell{Task 3 \\ Buffer \\ Cache}} 
+                    & Concept & \checkmark & \checkmark & \checkmark \\
+                    \cline{2-5}
+                    & Implementation & \checkmark & \checkmark & \checkmark \\
+                    \cline{2-5}
+                    & Debugging & \checkmark & \checkmark & \checkmark \\
+                    \cline{2-5}
+                    & Design Document & \checkmark & \checkmark & \checkmark \\
+                \hline
+            \end{tabular}
+        \end{center}
+
+\end{document}
+\endinput
