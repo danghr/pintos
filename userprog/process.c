@@ -203,7 +203,8 @@ int process_wait (tid_t child_tid)
         break;
       }
     }
-  /* If the thread of the child_tid is not child of current thread, then return -1. */
+  /* If the thread of the child_tid is not child of current thread, 
+     then return -1. */
   if (child_thread == NULL)
   {
     if (is_exited[child_tid])
