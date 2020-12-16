@@ -130,8 +130,47 @@
             \subsubsection{Copy here the declaration of each new or changed `\texttt{struct}' or `\texttt{struct}' member, global or static variable, `\texttt{typedef}', or enumeration. Identify the purpose of each in 25 words or less. }
     
             \begin{itemize}
-                \item In file \texttt{}
+                \item In file \texttt{filesys/cache.c}
 \begin{verbatim}
+/* Size of buffer cache */
+#define BUFFER_CACHE_SIZE 64
+/* Period to flush all the cache into the 
+   disk */
+#define BUFFER_CACHE_FLUSH_INTERVAL 20
+
+/* Entries of buffer cache */
+struct buffer_cache_entry
+{
+    /* Whether this sector is being used */
+    bool using;
+
+    /* Information of the cache */
+    /* Sector on the disk of the cached file */
+    block_sector_t sector;
+    /* Dirty bit */
+    bool dirty;
+    /* Last access time */
+    int64_t access_time;
+
+    /* Data storage for a block */
+    uint8_t buffer[BLOCK_SECTOR_SIZE];
+};
+
+/* Buffer cache entries */
+static struct 
+buffer_cache_entry 
+buffer_cache[BUFFER_CACHE_SIZE];
+/* Lock for buffer cache operations */
+static struct lock buffer_cache_lock;
+/* Flag that the buffer cache is initialzed */
+bool buffer_cache_initialized = false;
+
+/* Last time buffer cache flushed */
+int64_t buffer_cache_last_flush = 30;
+/* Last sector read, 0 for no need to read 
+   ahead */
+block_sector_t 
+buffer_cache_last_sector_loaded = 0;
 \end{verbatim}
             \end{itemize}
 
@@ -139,13 +178,27 @@
 
             \subsubsection{Describe how your cache replacement algorithm chooses a cache block to evict. } 
 
+                This implementation uses LRU to choose the cache to evict. Each time when accessing a cache block, including reading, writing and reading ahead, the current timer ticks will be stored in \texttt{access\_time} of \texttt{buffer\_cache\_entry}. 
+                
+                When eviction is needed, we find the cache blcok with the smallest \texttt{access\_time} and evict it. 
+
             \subsubsection{Describe your implementation of write-behind. }
 
+                A boolean variable \texttt{dirty} is set to \texttt{false} when data is freshly loaded, and only set to \texttt{true} when this part of cache is written. 
+
+                The written data in cache are not directly written to the disk. Instead, it will be written back only during the flushing process, which will be invoked during eviction, periodically flushing and halting. 
+
             \subsubsection{Describe your implementation of read-ahead. }
+
+                When reading a data, the sector read will be stored in \\ \texttt{buffer\_cache\_last\_sector\_loaded}. A thread repeatedly executing function \texttt{buffer\_cache\_period} will keep checking whether read-ahead is needed. If \texttt{buffer\_cache\_last\_sector\_loaded} is not zero, then the function will load the next sector into the cache if it is not loaded. 
+
+                Since this function is executed in a separate thread, it will be done asynchronously only when this thread is scheduled. 
         
         \subsection{Rationale}
 
             \subsubsection{When one process is actively reading or writing data in a buffer cache block, how are other processes prevented from evicting that block? }
+
+                A global lock of the whole buffer cache is implemented, and any operation on the buffer cache need to be done with the lock acquired. This prevents conflict eviction and reading/writing processes. 
 
     \section{Survey Questions}
 
@@ -191,13 +244,13 @@
                     & Design Document & \checkmark & \checkmark & \checkmark \\
                 \hline
                 \multirow{4}{*}{\makecell{Task 3 \\ Buffer \\ Cache}} 
-                    & Concept & \checkmark & \checkmark & \checkmark \\
+                    & Concept & & \checkmark & \\
                     \cline{2-5}
-                    & Implementation & \checkmark & \checkmark & \checkmark \\
+                    & Implementation & & \checkmark & \\
                     \cline{2-5}
                     & Debugging & \checkmark & \checkmark & \checkmark \\
                     \cline{2-5}
-                    & Design Document & \checkmark & \checkmark & \checkmark \\
+                    & Design Document & & \checkmark & \\
                 \hline
             \end{tabular}
         \end{center}
