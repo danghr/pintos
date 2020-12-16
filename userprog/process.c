@@ -226,12 +226,12 @@ int process_wait (tid_t child_tid)
     sema_down (&(wait_sema->sema));
     list_remove (&(wait_sema->elem));
     free (wait_sema);
-    return exit_status[child_tid];
   }
-  else
-  {
-    return -1;
-  }
+  
+  /* Since the default value of waiting is -1, we can directly return the
+     value from that to avoid the situation where child process exited 
+     before the previous `if' and return the correct exit code. */
+  return exit_status[child_tid];
 }
 
 /* Free the current process's resources. */
