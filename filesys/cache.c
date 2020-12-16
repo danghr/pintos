@@ -168,14 +168,21 @@ buffer_cache_period (void *aux UNUSED)
     if (buffer_cache_last_sector_loaded != 0)
       if (lock_try_acquire (&buffer_cache_lock))
         {
-          /* Allocate a cache for read ahead */
-          int cache_id = buffer_cache_allocate ();
-          ASSERT (0 <= cache_id && cache_id < BUFFER_CACHE_SIZE);
-          struct buffer_cache_entry *bce = &buffer_cache[cache_id];
-          ASSERT (bce->using == false);
+          block_sector_t to_load = buffer_cache_last_sector_loaded + 1;
+          
+          /* Only load if the data is not in the cache */
+          if (buffer_cache_lookup_sector (to_load) == -1)
+            {
+              /* Allocate a cache for read ahead */
+              int cache_id = buffer_cache_allocate ();
+              ASSERT (0 <= cache_id && cache_id < BUFFER_CACHE_SIZE);
+              struct buffer_cache_entry *bce = &buffer_cache[cache_id];
+              ASSERT (bce->using == false);
 
-          /* Load data from the next disk sector */
-          buffer_cache_load (buffer_cache_last_sector_loaded + 1, bce);
+              /* Load data from the next disk sector */
+              buffer_cache_load (to_load, bce);
+            }
+          
           /* No need to further load */
           buffer_cache_last_sector_loaded = 0;
           lock_release (&buffer_cache_lock);
