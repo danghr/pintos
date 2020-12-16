@@ -9,4 +9,6 @@ void buffer_cache_flush_all (void);
 void buffer_cache_read (block_sector_t, void *);
 void buffer_cache_write (block_sector_t, void *);
 
+void buffer_cache_period (void *);
+
 #endif /* filesys/cache.h */

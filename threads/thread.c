@@ -14,6 +14,7 @@
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
+#include "filesys/cache.h"
 
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
@@ -117,6 +118,10 @@ thread_start (void)
 
   /* Wait for the idle thread to initialize idle_thread. */
   sema_down (&idle_started);
+
+  /* Create a thread for buffer cache to periodically flush and 
+     implement asynchronous read ahead */
+  thread_create ("buffer_cache_period", PRI_DEFAULT, buffer_cache_period, NULL);
 }
 
 /* Called by the timer interrupt handler at each timer tick.

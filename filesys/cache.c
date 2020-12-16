@@ -3,11 +3,14 @@
 #include <debug.h>
 #include "filesys/filesys.h"
 #include "filesys/cache.h"
+#include "threads/thread.h"
 #include "threads/synch.h"
 #include "devices/timer.h"
 
 /* Size of buffer cache */
 #define BUFFER_CACHE_SIZE 64
+/* Period to flush all the cache into the disk */
+#define BUFFER_CACHE_FLUSH_INTERVAL 20
 
 /* Entries of buffer cache */
 struct buffer_cache_entry
@@ -30,6 +33,10 @@ static struct lock buffer_cache_lock;
 /* Flag that the buffer cache is initialzed */
 bool buffer_cache_initialized = false;
 
+/* Last time buffer cache flushed */
+int64_t buffer_cache_last_flush = 30;
+/* Last sector read, 0 for no need to read ahead */
+block_sector_t buffer_cache_last_sector_loaded = 0;
 
 /* Flush the given buffer cache entry ID */
 static void
@@ -106,6 +113,19 @@ buffer_cache_allocate (void)
   return buffer_cache_evict ();
 }
 
+/* Load data from disk sector to the given buffer cache entry */
+static void
+buffer_cache_load (block_sector_t sector, struct buffer_cache_entry *bce)
+{
+  /* Copy the data in sectors to the cache */
+  block_read (fs_device, sector, bce->buffer);
+  /* Set the parameters */
+  bce->dirty = false;
+  bce->sector = sector;
+  bce->using = true;
+  buffer_cache_last_sector_loaded = sector;
+}
+
 /* Initialize the buffer cache */
 void
 buffer_cache_init (void)
@@ -135,6 +155,43 @@ buffer_cache_flush_all (void)
   lock_release (&buffer_cache_lock);
 }
 
+/* Periodically check the value */
+void
+buffer_cache_period (void *aux UNUSED)
+{
+  while (true)
+  {
+    /* Try to acquire the lock and then do the read ahead
+       Do nothing if lock cannot be acquired, i.e. someone is operating
+       on the buffer cache */
+    if (buffer_cache_last_sector_loaded != 0)
+      if (lock_try_acquire (&buffer_cache_lock))
+        {
+          /* Allocate a cache for read ahead */
+          int cache_id = buffer_cache_allocate ();
+          ASSERT (0 <= cache_id && cache_id < BUFFER_CACHE_SIZE);
+          struct buffer_cache_entry *bce = &buffer_cache[cache_id];
+          ASSERT (bce->using == false);
+
+          /* Load data from the next disk sector */
+          buffer_cache_load (buffer_cache_last_sector_loaded + 1, bce);
+          /* No need to further load */
+          buffer_cache_last_sector_loaded = 0;
+          lock_release (&buffer_cache_lock);
+        }
+
+    /* Flush all every 20 timer ticks */
+    if (timer_ticks () - buffer_cache_last_flush 
+      >= BUFFER_CACHE_FLUSH_INTERVAL)
+      {
+        buffer_cache_flush_all ();
+        buffer_cache_last_flush = timer_ticks ();
+      }
+    thread_yield ();
+  }
+}
+
+
 /* Read/write operations through cache */
 
 /* Read through cache */
@@ -156,12 +213,8 @@ buffer_cache_read (block_sector_t sector, void *memory)
       bce = &buffer_cache[cache_id];
       ASSERT (bce->using == false);
 
-      /* Copy the data in sectors to the cache */
-      block_read (fs_device, sector, bce->buffer);
-      /* Set the parameters */
-      bce->dirty = false;
-      bce->sector = sector;
-      bce->using = true;
+      /* Load data from disk sector */
+      buffer_cache_load (sector, bce);
     }
   else
     bce = &buffer_cache[cache_id];
@@ -194,12 +247,8 @@ buffer_cache_write (block_sector_t sector, void *memory)
       bce = &buffer_cache[cache_id];
       ASSERT (bce->using == false);
 
-      /* Copy the data in sectors to the cache */
-      block_read (fs_device, sector, bce->buffer);
-      /* Set the parameters */
-      bce->dirty = false;
-      bce->sector = sector;
-      bce->using = true;
+      /* Load data from disk sector */
+      buffer_cache_load (sector, bce);
     }
   else
     bce = &buffer_cache[cache_id];
