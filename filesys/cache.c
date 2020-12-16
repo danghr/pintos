@@ -123,6 +123,7 @@ buffer_cache_load (block_sector_t sector, struct buffer_cache_entry *bce)
   bce->dirty = false;
   bce->sector = sector;
   bce->using = true;
+  bce->access_time = timer_ticks ();
   buffer_cache_last_sector_loaded = sector;
 }
 
