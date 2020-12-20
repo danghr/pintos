@@ -74,24 +74,91 @@
             \subsubsection{Copy here the declaration of each new or changed `\texttt{struct}' or `\texttt{struct}' member, global or static variable, `\texttt{typedef}', or enumeration. Identify the purpose of each in 25 words or less. }
         
                 \begin{itemize}
-                    \item In file \texttt{}
+                    \item In file \texttt{filesys/inode.c}
 \begin{verbatim}
+/* Number of direct blocks in an inode. */
+#define DIRECT_BLOCK 12
+/* Number of indirect blocks stored 
+   in a sector. */
+#define INDIRECT_BLOCK \
+    (BLOCK_SECTOR_SIZE / \
+    (sizeof (block_sector_t)))
+/* Maximum number of sectors in an inode */
+#define MAXIMUM_SECTORS_IN_INODE \
+    DIRECT_BLOCK + INDIRECT_BLOCK + \
+    INDIRECT_BLOCK * INDIRECT_BLOCK
+
+...
+
+/* inode operation lock. */
+struct lock inode_extension_lock;
+
+...
+
+struct inode_disk
+{
+    /* Direct and indirect blocks. 
+       - DIRECT_BLOCK blocks
+       - 1 indirect block
+       - 1 double indirect block */
+    block_sector_t blocks[DIRECT_BLOCK + 2];
+    
+    ...
+
+    /* To meet BLOCK_SECTOR_SIZE size 
+       requirement. */
+    char unused[BLOCK_SECTOR_SIZE
+        - sizeof (block_sector_t) 
+            * (DIRECT_BLOCK + 2)
+        - sizeof (off_t)
+        - sizeof (unsigned)
+        ];
+};
+
+
+/* Indirect blocks stored in a sector. */
+struct inode_indirect_block_sector
+{
+    /* Sectors */
+    block_sector_t blocks[INDIRECT_BLOCK];
+};
+
+/* Double indirect blocks stored in a 
+   sector. */
+struct inode_double_indirect_block_sector
+{
+    /* Sectors */
+    block_sector_t 
+    indirect_blocks[INDIRECT_BLOCK];
+}; 
 \end{verbatim}
                 \end{itemize}
             
             \subsubsection{What is the maximum size of a file supported by your inode structure?  Show your work. }
+
+                In this file structure, in total $12 + 128 + 128^2 = 16524$ sectors can be stored in an inode. Since each sector contains $512$B data, the maximum file length is $512\text{B} \times 16524 = 8.068\text{MiB}$. 
         
         \subsection{Synchronization}
 
             \subsubsection{Explain how your code avoids a race if two processes attempt to extend a file at the same time. }
 
+                The operation of extension of file must be done with lock \texttt{file\_extension\_lock} acquired, which avoids the race. After one have acquired a lock, it will double check whether file extension is needed, to avoid the situation where the file is extended when it is waiting for the lock. 
+
             \subsubsection{Suppose processes A and B both have file F open, both positioned at end-of-file.  If A reads and B writes F at the same time, A may read all, part, or none of what B writes.  However, A may not read data other than what B writes, e.g. if B writes nonzero data, A is not allowed to see all zeros.  Explain how your code avoids this race. }
 
+                When reading data, function \texttt{inode\_read\_at} will check each byte at the very beginning, and the loop will be terminated when the offset does not exist in the sectors, so data cannot be read when not allocated in the sectors. 
+
             \subsubsection{Explain how your synchronization design provides "fairness".  File access is "fair" if readers cannot indefinitely block writers or vice versa.  That is, many processes reading from a file cannot prevent forever another process from writing the file, and many processes writing to a file cannot prevent another process forever from reading the file. }
+
+                The lock only locks the file extension process. Thus, this is determined by the schedular, which currently uses round-robin method to schedule all threads, so the fairness is achieved in this method. 
         
         \subsection{Rationale}
             
             \subsubsection{Is your \texttt{inode} structure a multilevel index?  If so, why did you choose this particular combination of direct, indirect, and doubly indirect blocks?  If not, why did you choose an alternative \texttt{}{inode} structure, and what advantages and disadvantages does your structure have, compared to a multilevel index? } 
+
+                This is a two-level index which is able to carry 8MiB file as stated in section 1.1.2. 
+                
+                In this design, each structure contains file metadata, 12 direct blocks, a 1-level indirect block and a double indirect block. We choose this because it is much the same as the Unix File System except for lack of triple indirect blocks, and it is adequate to handle the testcases. 
     
     \section{Subdirectories}
 
