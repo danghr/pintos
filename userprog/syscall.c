@@ -152,6 +152,23 @@ is_valid_addr (const void *uaddr)
   return true;
 }
 
+/* Check whether the string is valid */
+bool 
+check_the_string (void *str)
+{
+  while(is_valid_addr(str))
+    {
+      if (*(char *)str == '\0')
+        break;
+      (char*)str++;
+    }
+  if (is_valid_addr(str))
+    return true;
+  else
+    return false;
+}
+
+
 /* System call handler.
    Retrieve the system call number and send it to correct
    wrappers. */
@@ -440,19 +457,7 @@ syscall_exit_wrapper (struct intr_frame *f)
   syscall_exit (status);
   return 0;
 }
-bool 
-check_the_string(void *str){
-  while(is_valid_addr(str))
-  {
-    if(*(char *)str == '\0')
-      break;
-    (char*)str++;
-  }
-  if(is_valid_addr(str))
-    return true;
-  else
-    return false;
-}
+
 static int
 syscall_exec_wrapper (struct intr_frame *f)
 {
@@ -591,7 +596,6 @@ syscall_read_wrapper (struct intr_frame *f)
 static int
 syscall_write_wrapper (struct intr_frame *f)
 {
-  // printf("esp:%d, base:%d, diff:%d \n",(unsigned)f->esp, (unsigned)PHYS_BASE, (unsigned)PHYS_BASE - (unsigned)f->esp);
   /* Validate memory address */
   for (int i = 1; i <= 4; i++)
     if (!is_valid_addr ((void*)(((char *)f->esp + 4 * i))))
@@ -610,6 +614,7 @@ syscall_write_wrapper (struct intr_frame *f)
   f->eax = syscall_write (fd, buffer, length);
   return 0;
 }
+
 static int
 syscall_seek_wrapper (struct intr_frame *f)
 {
