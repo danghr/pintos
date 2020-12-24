@@ -298,7 +298,7 @@ syscall_open (const char *file)
   /* If the opening process fails, straightly return -1 */
   if(to_open == NULL)
     return -1;
-  
+
   /* Allocate memory of the fd_entry after the file is opened to 
      avoid memory leak */
   opened_file = malloc (sizeof (struct fd_entry));
@@ -438,6 +438,7 @@ syscall_close (int fd)
   return 0;
 }
 
+/* change the directory owned by current thread to another */
 bool
 syscall_chdir(const char* file_name)
 {
@@ -455,6 +456,7 @@ syscall_chdir(const char* file_name)
   return true;
 }
 
+/* create a new direactory */
 bool
 syscall_mkdir(const char* file_name)
 {
@@ -467,6 +469,7 @@ syscall_mkdir(const char* file_name)
   return result;
 }
 
+/* read the direactory entry from file descriptor stores the null-terminated file name in name */
 bool
 syscall_readdir(int fd, char* name)
 {
@@ -499,6 +502,7 @@ syscall_readdir(int fd, char* name)
   return result;
 }
 
+/* check whether fd represent a directory */
 bool
 syscall_isdir(int fd)
 {
@@ -511,6 +515,7 @@ syscall_isdir(int fd)
   return result;
 }
 
+/* get the inode number of fd */
 int
 syscall_inumber (int fd)
 {

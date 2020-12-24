@@ -49,11 +49,17 @@ bool
 filesys_create (const char *name, off_t initial_size, bool is_dir) 
 {
   block_sector_t inode_sector = 0;
-  struct dir *dir = dir_open_root ();
+  int name_length = strlen(name);
+  char directory[name_length];
+  char file_name[name_length];
+
+  split_path(name, directory, file_name);
+
+  struct dir *dir = dir_open_path (directory);
   bool success = (dir != NULL
                   && free_map_allocate (1, &inode_sector)
                   && inode_create (inode_sector, initial_size, is_dir)
-                  && dir_add (dir, name, inode_sector));
+                  && dir_add (dir, file_name, inode_sector));
   if (!success && inode_sector != 0) 
     free_map_release (inode_sector, 1);
   dir_close (dir);
@@ -68,12 +74,35 @@ filesys_create (const char *name, off_t initial_size, bool is_dir)
 struct file *
 filesys_open (const char *name)
 {
-  struct dir *dir = dir_open_root ();
+  int name_length = strlen(name);
+  if (name_length == 0)
+  {
+    return NULL;
+  }
+  char directory[name_length + 1];
+  char file_name[name_length + 1];
+
+  split_path(name, directory, file_name);
+  struct dir *dir = dir_open_path (directory);
   struct inode *inode = NULL;
 
   if (dir != NULL)
-    dir_lookup (dir, name, &inode);
-  dir_close (dir);
+  {
+    if (strlen(file_name) > 0)
+    {
+      dir_lookup (dir, file_name, &inode);
+      dir_close (dir);
+    }
+    else
+    {
+      inode = dir_get_inode (dir);
+    }
+  }
+
+  if (inode == NULL || inode_is_removed(inode))
+  {
+    return NULL;
+  }
 
   return file_open (inode);
 }
@@ -85,8 +114,13 @@ filesys_open (const char *name)
 bool
 filesys_remove (const char *name) 
 {
-  struct dir *dir = dir_open_root ();
-  bool success = dir != NULL && dir_remove (dir, name);
+  int name_length = strlen(name);
+  char directory[name_length];
+  char file_name[name_length];
+
+  split_path(name, directory, file_name);
+  struct dir *dir = dir_open_path (directory);
+  bool success = dir != NULL && dir_remove (dir, file_name);
   dir_close (dir); 
 
   return success;
@@ -102,4 +136,48 @@ do_format (void)
     PANIC ("root directory creation failed");
   free_map_close ();
   printf ("done.\n");
+}
+
+/* path spliting */
+void
+split_path(const char* path, char *dir, char *name)
+{
+  // printf("----------------------------------------------------------------\n");
+  // printf("%s\n", path);
+  char* dir_iter = dir;
+  if (dir_iter && path[0] == "/")
+  {
+    memcpy (dir_iter, "/", sizeof(char));
+    dir_iter ++;
+  }
+
+  char *token, *save_ptr;
+  char *last_token = "";
+
+  for (token = strtok_r (path, "/", &save_ptr); token != NULL;
+        token = strtok_r (NULL, "/", &save_ptr))
+    {
+      int last_length = strlen(last_token);
+      if (dir_iter && last_length > 0)
+      {
+        memcpy (dir_iter, last_token, sizeof(char) * last_length);
+        dir_iter += last_length;
+        memcpy (dir_iter, "/", sizeof(char));
+        dir_iter ++;
+      }
+
+      last_token = token;
+    }
+
+  if (dir_iter)
+  {
+    // printf("****************************\n");
+    memcpy (dir_iter, "\0", sizeof(char));
+    // printf("%s\n", dir_iter);
+  }
+
+  memcpy(name, last_token, sizeof(char) * (strlen(last_token) + 1));
+  // printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+  // printf("%s\n", dir);
+  // printf("%s\n", name);
 }
