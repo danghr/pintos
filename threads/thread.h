@@ -144,6 +144,8 @@ struct thread
     bool is_waited;
     bool is_waiting;
     struct thread* parent_thread;
+
+    struct dir* directory;
   };
 
 /* If false (default), use round-robin scheduler.

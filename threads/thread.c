@@ -487,6 +487,8 @@ init_thread (struct thread *t, const char *name, int priority)
   t->is_waiting = false;
   t->executing_file = NULL;
   t->exit_status = -1;
+
+  t->directory = NULL;
 }
 
 static void init_thread_child (struct thread* t, struct thread* parent)

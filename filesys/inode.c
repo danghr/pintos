@@ -751,3 +751,10 @@ inode_length (const struct inode *inode)
 {
   return inode->data.length;
 }
+
+/* Returns whether the inode is removed */
+bool
+inode_is_removed (const struct inode *inode)
+{
+  return inode->removed;
+}

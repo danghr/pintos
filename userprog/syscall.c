@@ -10,6 +10,7 @@
 #include "threads/malloc.h"
 #include "filesys/filesys.h"
 #include "filesys/file.h"
+#include "filesys/directory.h"
 #include "devices/shutdown.h"
 #include "devices/intq.h"
 #include "devices/input.h"
@@ -425,6 +426,59 @@ syscall_close (int fd)
   return 0;
 }
 
+bool
+syscall_chdir(const char* file_name)
+{
+  lock_acquire (&file_lock);
+  struct dir *dir = dir_open_path (file_name);
+
+  if(dir == NULL) {
+    return false;
+  }
+
+  dir_close (thread_current()->directory);
+  thread_current()->directory = dir;
+  lock_release (&file_lock);
+
+  return true;
+}
+
+bool
+syscall_mkdir(const char* file_name)
+{
+  int result;
+
+  lock_acquire (&file_lock);
+  result = filesys_create(file_name, 0);
+  lock_release (&file_lock);
+
+  return result;
+}
+
+// bool
+// syscall_readdir(const char* file_name)
+// {
+//   int result;
+
+//   lock_acquire (&file_lock);
+//   result = filesys_create(file_name, 0);
+//   lock_release (&file_lock);
+
+//   return result;
+// }
+
+bool
+syscall_isdir(int fd)
+{
+  int result;
+
+  lock_acquire (&file_lock);
+  result = filesys_create(file_name, 0);
+  lock_release (&file_lock);
+
+  return result;
+}
+
 /* System call wrappers.
    Retrive correct argument from the stack and send it to call 
    functions. 
@@ -682,13 +736,31 @@ syscall_munmap_wrapper (struct intr_frame *f UNUSED)
 static int
 syscall_chdir_wrapper (struct intr_frame *f UNUSED)
 {
-  return -1;
+  /* Validate memory address */
+  if (!is_valid_addr ((void*)((char *)f->esp + 18)))
+    return -1;
+
+  /* Decode parameters */
+  char *file_name = *(char**)((int*)(f->esp + 4));
+
+  /* Execute the function */
+  f->eax = syscall_chdir (file_name);
+  return 0;
 }
 
 static int
 syscall_mkdir_wrapper (struct intr_frame *f UNUSED)
 {
-  return -1;
+  /* Validate memory address */
+  if (!is_valid_addr ((void*)((char *)f->esp + 18)))
+    return -1;
+
+  /* Decode parameters */
+  char *file_name = *(char**)((int*)(f->esp + 4));
+
+  /* Execute the function */
+  f->eax = syscall_mkdir (file_name);
+  return 0;
 }
 
 static int
@@ -700,7 +772,16 @@ syscall_readdir_wrapper (struct intr_frame *f UNUSED)
 static int
 syscall_isdir_wrapper (struct intr_frame *f UNUSED)
 {
-  return -1;
+  /* Validate memory address */
+  if (!is_valid_addr ((void*)((char *)f->esp + 8)))
+    return -1;
+  
+  /* Decode parameters */
+  int fd = *((int*)(f->esp + 4));
+
+  f->eax = syscall_isdir(fd);
+
+  return 0;
 }
 
 static int

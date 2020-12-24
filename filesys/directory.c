@@ -5,6 +5,7 @@
 #include "filesys/filesys.h"
 #include "filesys/inode.h"
 #include "threads/malloc.h"
+#include "threads/thread.h"
 
 /* A directory. */
 struct dir 
@@ -56,6 +57,64 @@ dir_open_root (void)
 {
   return dir_open (inode_open (ROOT_DIR_SECTOR));
 }
+
+struct dir *
+dir_open_path (const char* path)
+{
+  struct dir* result;
+  
+  /* open the start position of directory */
+  if (path[0] == '/')
+  {
+    result = dir_open_root();
+  }
+  else
+  {
+    struct thread* current_thread = thread_current();
+    if (current_thread->directory == NULL)
+    {
+      result = dir_open_root();
+    }
+    else
+    {
+      result = dir_reopen(current_thread->directory);
+    }
+  }
+
+  char *token, *save_ptr;
+
+  /* iterate the path */
+  for (token = strtok_r (path, "/", &save_ptr); token != NULL;
+        token = strtok_r (NULL, "/", &save_ptr))
+  {
+    struct inode* inode = NULL;
+    if (!dir_lookup(result, token, &inode))
+    {
+      dir_close(result);
+      return NULL;
+    }
+
+    struct dir* next_dir = dir_open(inode);
+    if (next_dir == NULL)
+    {
+      dir_close(result);
+      return NULL;
+    }
+
+    dir_close(result);
+    result = next_dir;
+  }
+
+  /* if the result inode is removed, return NULL */
+  if (inode_is_removed(dir_get_inode(result)))
+  {
+    dir_close(result);
+    return NULL;    
+  }
+
+  return result;
+};
+
 
 /* Opens and returns a new directory for the same inode as DIR.
    Returns a null pointer on failure. */
