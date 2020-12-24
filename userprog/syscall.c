@@ -11,6 +11,7 @@
 #include "filesys/filesys.h"
 #include "filesys/file.h"
 #include "filesys/directory.h"
+#include "filesys/inode.h"
 #include "devices/shutdown.h"
 #include "devices/intq.h"
 #include "devices/input.h"
@@ -82,6 +83,7 @@ struct fd_entry
   struct file *file;
   int fd;
   struct list_elem elem;
+  struct dir *directory;
 };
 
 /* Allocate new file descriptor in the thread */
@@ -264,7 +266,7 @@ bool
 syscall_create (const char *file, unsigned initial_size)
 {
   lock_acquire (&file_lock);
-  bool ret = filesys_create (file, initial_size);
+  bool ret = filesys_create (file, initial_size, false);
   lock_release (&file_lock);
   return ret;
 }
@@ -302,6 +304,16 @@ syscall_open (const char *file)
   opened_file = malloc (sizeof (struct fd_entry));
   opened_file->file = to_open;
   opened_file->fd = allocate_fd (); /* Allocate file descriptor */
+
+  struct inode *inode = file_get_inode(opened_file->file);
+  if(inode != NULL && inode_is_dir(inode))
+  {
+    opened_file->directory = dir_open(inode_reopen(inode));
+  }
+  else
+  {
+    opened_file->directory = NULL;
+  }
 
   /* Push into the list of opened files by current thread */
   list_push_back (&(thread_current ()->opened_files), 
@@ -449,31 +461,63 @@ syscall_mkdir(const char* file_name)
   int result;
 
   lock_acquire (&file_lock);
-  result = filesys_create(file_name, 0);
+  result = filesys_create(file_name, 0, true);
   lock_release (&file_lock);
 
   return result;
 }
 
-// bool
-// syscall_readdir(const char* file_name)
-// {
-//   int result;
-
-//   lock_acquire (&file_lock);
-//   result = filesys_create(file_name, 0);
-//   lock_release (&file_lock);
-
-//   return result;
-// }
-
 bool
-syscall_isdir(int fd)
+syscall_readdir(int fd, char* name)
 {
   int result;
 
   lock_acquire (&file_lock);
-  result = filesys_create(file_name, 0);
+  struct fd_entry* fd_entry = get_fd_entry(fd);
+  if (fd_entry == NULL)
+  {
+    lock_release (&file_lock);
+    return false;
+  }
+
+  struct inode* inode = file_get_inode(fd_entry->file);
+  if (inode == NULL)
+  {
+    lock_release (&file_lock);
+    return false;
+  }
+
+  if (!inode_is_dir(inode))
+  {
+    lock_release (&file_lock);
+    return false;
+  }
+
+  result = dir_readdir(fd_entry->directory, name);
+  lock_release (&file_lock);
+
+  return result;
+}
+
+bool
+syscall_isdir(int fd)
+{
+  bool result;
+
+  lock_acquire (&file_lock);
+  result = inode_is_dir(file_get_inode(get_fd_entry(fd)->file));
+  lock_release (&file_lock);
+
+  return result;
+}
+
+int
+syscall_inumber (int fd)
+{
+  int result;
+
+  lock_acquire (&file_lock);
+  result = (int) inode_get_inumber(file_get_inode(get_fd_entry(fd)->file));
   lock_release (&file_lock);
 
   return result;
@@ -766,7 +810,17 @@ syscall_mkdir_wrapper (struct intr_frame *f UNUSED)
 static int
 syscall_readdir_wrapper (struct intr_frame *f UNUSED)
 {
-  return -1;
+  /* Validate memory address */
+  if (!is_valid_addr ((void*)((char *)f->esp + 8)))
+    return -1;
+
+  /* Decode parameters */
+  int fd = *((int*)(f->esp + 4));
+  char *name = *(char**)(f->esp + 8);
+
+  f->eax = syscall_readdir(fd, name);
+
+  return 0;
 }
 
 static int
@@ -787,5 +841,14 @@ syscall_isdir_wrapper (struct intr_frame *f UNUSED)
 static int
 syscall_inumber_wrapper (struct intr_frame *f UNUSED)
 {
-  return -1;
+    /* Validate memory address */
+  if (!is_valid_addr ((void*)((char *)f->esp + 8)))
+    return -1;
+  
+  /* Decode parameters */
+  int fd = *((int*)(f->esp + 4));
+
+  f->eax = syscall_inumber(fd);
+
+  return 0;
 }

@@ -42,12 +42,14 @@ struct inode_disk
     off_t length;                             /* File size in bytes. */
     unsigned magic;                           /* Magic number. */
 
+    bool is_dir;
     /* MODIFY THE FOLLOWING IF VARIABLES IN THIS STRUCTURE ARE MODIFIED */
     /* To meet BLOCK_SECTOR_SIZE size requirement. */
     char unused[BLOCK_SECTOR_SIZE
                 - sizeof (block_sector_t) * (DIRECT_BLOCK + 2)  /* blocks */
                 - sizeof (off_t)              /* length */
                 - sizeof (unsigned)           /* magic */
+                - sizeof (bool)               /* is_dir */
                ];
   };
 
@@ -453,7 +455,7 @@ inode_free (struct inode_disk *idisk)
    Returns true if successful.
    Returns false if memory or disk allocation fails. */
 bool
-inode_create (block_sector_t sector, off_t length)
+inode_create (block_sector_t sector, off_t length, bool is_dir)
 {
   struct inode_disk *disk_inode = NULL;
   bool success = false;
@@ -469,6 +471,7 @@ inode_create (block_sector_t sector, off_t length)
     {
       disk_inode->length = length;
       disk_inode->magic = INODE_MAGIC;
+      disk_inode->is_dir = is_dir;
 
       /* Try to allocate space for the given length. */
       if (inode_allocate (disk_inode, length))
@@ -757,4 +760,11 @@ bool
 inode_is_removed (const struct inode *inode)
 {
   return inode->removed;
+}
+
+/* Returns whether the inode is directory */
+bool
+inode_is_dir (const struct inode *inode)
+{
+  return inode->data.is_dir;
 }
