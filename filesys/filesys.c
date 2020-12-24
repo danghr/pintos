@@ -2,6 +2,7 @@
 #include <debug.h>
 #include <stdio.h>
 #include <string.h>
+#include "threads/malloc.h"
 #include "filesys/file.h"
 #include "filesys/free-map.h"
 #include "filesys/inode.h"
@@ -144,8 +145,12 @@ split_path(const char* path, char *dir, char *name)
 {
   // printf("----------------------------------------------------------------\n");
   // printf("%s\n", path);
+  int path_length = strlen(path);
+  char* path_copy = (char*)malloc(sizeof(char) * (path_length + 1));
+  memcpy (path_copy, path, sizeof(char) * (path_length + 1));
+
   char* dir_iter = dir;
-  if (dir_iter && path[0] == "/")
+  if (dir_iter && path_copy[0] == "/")
   {
     memcpy (dir_iter, "/", sizeof(char));
     dir_iter ++;
@@ -154,7 +159,7 @@ split_path(const char* path, char *dir, char *name)
   char *token, *save_ptr;
   char *last_token = "";
 
-  for (token = strtok_r (path, "/", &save_ptr); token != NULL;
+  for (token = strtok_r (path_copy, "/", &save_ptr); token != NULL;
         token = strtok_r (NULL, "/", &save_ptr))
     {
       int last_length = strlen(last_token);
@@ -180,4 +185,5 @@ split_path(const char* path, char *dir, char *name)
   // printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
   // printf("%s\n", dir);
   // printf("%s\n", name);
+  // printf("%s\n", path);
 }

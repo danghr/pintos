@@ -63,8 +63,11 @@ dir_open_path (const char* path)
 {
   struct dir* result;
   
+  int path_length = strlen(path);
+  char* path_copy = (char*)malloc(sizeof(char) * (path_length + 1));
+  memcpy (path_copy, path, sizeof(char) * (path_length + 1));
   /* open the start position of directory */
-  if (path[0] == '/')
+  if (path_copy[0] == '/')
   {
     result = dir_open_root();
   }
@@ -84,7 +87,7 @@ dir_open_path (const char* path)
   char *token, *save_ptr;
 
   /* iterate the path */
-  for (token = strtok_r (path, "/", &save_ptr); token != NULL;
+  for (token = strtok_r (path_copy, "/", &save_ptr); token != NULL;
         token = strtok_r (NULL, "/", &save_ptr))
   {
     struct inode* inode = NULL;
