@@ -86,7 +86,7 @@ filesys_open (const char *name)
   split_path(name, directory, file_name);
   struct dir *dir = dir_open_path (directory);
   struct inode *inode = NULL;
-
+  
   if (dir != NULL)
   {
     if (strlen(file_name) > 0)
@@ -104,7 +104,7 @@ filesys_open (const char *name)
   {
     return NULL;
   }
-
+  
   return file_open (inode);
 }
 

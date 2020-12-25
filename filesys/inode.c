@@ -517,6 +517,7 @@ inode_open (block_sector_t sector)
   inode->open_cnt = 1;
   inode->deny_write_cnt = 0;
   inode->removed = false;
+  
   buffer_cache_read (inode->sector, &inode->data);
   return inode;
 }
