@@ -121,10 +121,12 @@ dir_open_path (const char* path)
     goto null_output;
   }
 
+  free(path_copy);
   return result;
 
 null_output:
   dir_close(result);
+  free(path_copy);
   return NULL;  
 };
 
