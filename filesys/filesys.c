@@ -150,7 +150,7 @@ split_path(const char* path, char *dir, char *name)
   memcpy (path_copy, path, sizeof(char) * (path_length + 1));
 
   char* dir_iter = dir;
-  if (dir_iter && path_copy[0] == "/")
+  if (dir_iter && path_copy[0] == '/')
   {
     memcpy (dir_iter, "/", sizeof(char));
     dir_iter ++;

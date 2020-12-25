@@ -315,7 +315,7 @@ inode_allocate (struct inode_disk *idisk, off_t size)
 {
   ASSERT (idisk != NULL);
   ASSERT (size >= 0);
-  ASSERT (size < BLOCK_SECTOR_SIZE * MAXIMUM_SECTORS_IN_INODE);
+  ASSERT (size < (off_t)(BLOCK_SECTOR_SIZE * MAXIMUM_SECTORS_IN_INODE));
 
   /* Zero bytes to write. */
   static char zeros[BLOCK_SECTOR_SIZE];
