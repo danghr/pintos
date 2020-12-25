@@ -91,17 +91,16 @@ dir_open_path (const char* path)
         token = strtok_r (NULL, "/", &save_ptr))
   {
     struct inode* inode = NULL;
+
     if (!dir_lookup(result, token, &inode))
     {
-      dir_close(result);
-      return NULL;
+      goto null_output;
     }
 
     struct dir* next_dir = dir_open(inode);
     if (next_dir == NULL)
     {
-      dir_close(result);
-      return NULL;
+      goto null_output;
     }
 
     dir_close(result);
@@ -110,12 +109,15 @@ dir_open_path (const char* path)
 
   /* if the result inode is removed, return NULL */
   if (inode_is_removed(dir_get_inode(result)))
-  {
-    dir_close(result);
-    return NULL;    
+  {  
+    goto null_output;
   }
 
   return result;
+
+null_output:
+  dir_close(result);
+  return NULL;  
 };
 
 

@@ -143,8 +143,6 @@ do_format (void)
 void
 split_path(const char* path, char *dir, char *name)
 {
-  // printf("----------------------------------------------------------------\n");
-  // printf("%s\n", path);
   int path_length = strlen(path);
   char* path_copy = (char*)malloc(sizeof(char) * (path_length + 1));
   memcpy (path_copy, path, sizeof(char) * (path_length + 1));
@@ -176,14 +174,8 @@ split_path(const char* path, char *dir, char *name)
 
   if (dir_iter)
   {
-    // printf("****************************\n");
     memcpy (dir_iter, "\0", sizeof(char));
-    // printf("%s\n", dir_iter);
   }
 
   memcpy(name, last_token, sizeof(char) * (strlen(last_token) + 1));
-  // printf("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-  // printf("%s\n", dir);
-  // printf("%s\n", name);
-  // printf("%s\n", path);
 }
