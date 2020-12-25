@@ -178,4 +178,5 @@ split_path(const char* path, char *dir, char *name)
   }
 
   memcpy(name, last_token, sizeof(char) * (strlen(last_token) + 1));
+  free (path_copy);
 }
