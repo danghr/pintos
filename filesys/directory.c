@@ -260,8 +260,22 @@ dir_remove (struct dir *dir, const char *name)
 
   /* Open inode. */
   inode = inode_open (e.inode_sector);
-  if (inode == NULL)
+  if (inode == NULL || inode_is_removed(inode))
     goto done;
+
+  if (inode_is_dir(inode))
+  {
+    struct dir_entry dir_entry;
+
+    int dir_entry_size = sizeof(dir_entry);
+    for (int iterator = 0; inode_read_at (inode, &dir_entry, dir_entry_size, iterator) == dir_entry_size; iterator += dir_entry_size)
+    {
+      if (dir_entry.in_use)
+      {
+        goto done;
+      }
+    }
+  }
 
   /* Erase directory entry. */
   e.in_use = false;
