@@ -83,7 +83,7 @@ struct fd_entry
   struct file *file;
   int fd;
   struct list_elem elem;
-  struct dir *directory;
+  struct dir *directory; /* to store the corresponding directory */
 };
 
 /* Allocate new file descriptor in the thread */
@@ -478,30 +478,33 @@ syscall_readdir (int fd, char* name)
   int result;
 
   lock_acquire (&file_lock);
+  /* step by step get fd then inode and check */
   struct fd_entry* fd_entry = get_fd_entry (fd);
   if (fd_entry == NULL)
     {
-      lock_release (&file_lock);
-      return false;
+      goto output_false;
     }
 
   struct inode* inode = file_get_inode (fd_entry->file);
   if (inode == NULL)
     {
-      lock_release (&file_lock);
-      return false;
+      goto output_false;
     }
 
   if (!inode_is_dir (inode))
     {
-      lock_release (&file_lock);
-      return false;
+      goto output_false;
     }
 
   result = dir_readdir (fd_entry->directory, name);
   lock_release (&file_lock);
 
   return result;
+
+/* output false for reading failure. */
+output_false:
+  lock_release (&file_lock);
+  return false;
 }
 
 /* Check whether FD represent a directory. */

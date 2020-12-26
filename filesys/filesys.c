@@ -54,6 +54,7 @@ filesys_create (const char *name, off_t initial_size, bool is_dir)
   char directory[name_length];
   char file_name[name_length];
 
+  /* split path to fine directory and file name */
   split_path (name, directory, file_name);
 
   struct dir *dir = dir_open_path (directory);
@@ -83,6 +84,7 @@ filesys_open (const char *name)
   char directory[name_length + 1];
   char file_name[name_length + 1];
 
+  /* split path to fine directory and file name */
   split_path (name, directory, file_name);
   struct dir *dir = dir_open_path (directory);
   struct inode *inode = NULL;
@@ -119,6 +121,7 @@ filesys_remove (const char *name)
   char directory[name_length];
   char file_name[name_length];
 
+  /* split path to fine directory and file name */
   split_path (name, directory, file_name);
   struct dir *dir = dir_open_path (directory);
   bool success = dir != NULL && dir_remove (dir, file_name);
@@ -144,12 +147,16 @@ void
 split_path(const char* path, char *dir, char *name)
 {
   int path_length = strlen (path);
+
+  /* copy the path to avoid being changed by tokenizing */
   char* path_copy = (char*) malloc 
     (sizeof (char) * (path_length + 1));
   memcpy (path_copy, path, 
     sizeof (char) * (path_length + 1));
 
   char* dir_iter = dir;
+
+  /* check whether it is the absolute path */
   if (dir_iter && path_copy[0] == '/')
     {
       memcpy (dir_iter, "/", sizeof (char));
@@ -159,12 +166,14 @@ split_path(const char* path, char *dir, char *name)
   char *token, *save_ptr;
   char *last_token = "";
 
+  /* tokenize and iterate the path to get directory and last for name */
   for (token = strtok_r (path_copy, "/", &save_ptr); token != NULL;
        token = strtok_r (NULL, "/", &save_ptr))
     {
       int last_length = strlen(last_token);
       if (dir_iter && last_length > 0)
         {
+          /* append to directory */
           memcpy (dir_iter, last_token, sizeof (char) * last_length);
           dir_iter += last_length;
           memcpy (dir_iter, "/", sizeof (char));
@@ -179,6 +188,7 @@ split_path(const char* path, char *dir, char *name)
       memcpy (dir_iter, "\0", sizeof(char));
     }
 
+  /* get last token to be the name */
   memcpy (name, last_token, sizeof (char) * (strlen (last_token) + 1));
   free (path_copy);
 }

@@ -29,6 +29,7 @@ dir_create (block_sector_t sector, size_t entry_cnt)
 {
   if (inode_create (sector, entry_cnt * sizeof (struct dir_entry), true))
     {
+      /* when creating, init the parent directory to be itself and change it later */
       struct dir* directory = dir_open (inode_open (sector));
       struct dir_entry dir_entry;
       dir_entry.inode_sector = sector;
@@ -48,6 +49,7 @@ dir_open (struct inode *inode)
   if (inode != NULL && dir != NULL)
     {
       dir->inode = inode;
+      /* set pos pass the parent information */
       dir->pos = sizeof (struct dir_entry);
       return dir;
     }
@@ -67,14 +69,18 @@ dir_open_root (void)
   return dir_open (inode_open (ROOT_DIR_SECTOR));
 }
 
+/* Opens the directory of the input path and returns a struct
+dir for it */
 struct dir *
 dir_open_path (const char* path)
 {
   struct dir* result;
   
+  /* copy the path to avoid being changed by tokenize */
   int path_length = strlen (path);
   char* path_copy = (char*) malloc (sizeof (char) * (path_length + 1));
   memcpy (path_copy, path, sizeof (char) * (path_length + 1));
+
   /* open the start position of directory */
   if (path_copy[0] == '/')
     {
@@ -82,6 +88,7 @@ dir_open_path (const char* path)
     }
   else
     {
+      /* open the directory of current thread or root if it is NULL */
       struct thread* current_thread = thread_current ();
       if (current_thread->directory == NULL)
         {
@@ -100,6 +107,7 @@ dir_open_path (const char* path)
         token = strtok_r (NULL, "/", &save_ptr))
     {
       struct inode* inode = NULL;
+      /* find the directory by token */
       if (!dir_lookup (result, token, &inode))
         {
           goto null_output;
@@ -124,6 +132,7 @@ dir_open_path (const char* path)
   free (path_copy);
   return result;
 
+/* return NULL */
 null_output:
   dir_close (result);
   free (path_copy);
@@ -198,8 +207,10 @@ dir_lookup (const struct dir *dir, const char *name,
   ASSERT (dir != NULL);
   ASSERT (name != NULL);
 
+  /* deal with relative path */
   if (!strcmp (name, ".."))
     {
+      /* read the parent directory from disk memory */
       struct dir_entry parent_dir_entry;
       inode_read_at (dir->inode, &parent_dir_entry, 
         sizeof (parent_dir_entry), 0);
@@ -207,6 +218,7 @@ dir_lookup (const struct dir *dir, const char *name,
     }
   else if (!strcmp(name, "."))
     {
+      /* open the current directory */
       *inode = inode_reopen (dir->inode);
     }
   else if (lookup (dir, name, &e, NULL))
@@ -300,11 +312,14 @@ dir_remove (struct dir *dir, const char *name)
   if (inode == NULL || inode_is_removed (inode))
     goto done;
 
+  /* if the inode is a directory check whether one of its children is inuse
+  and do not remove if so */
   if (inode_is_dir (inode))
     {
       struct dir_entry dir_entry;
 
       int dir_entry_size = sizeof (dir_entry);
+      /* iterate the disk memory */
       for (int iterator = sizeof (dir_entry);
         inode_read_at (inode, &dir_entry, dir_entry_size, iterator)
         == dir_entry_size; iterator += dir_entry_size)

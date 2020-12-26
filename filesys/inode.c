@@ -42,7 +42,7 @@ struct inode_disk
     off_t length;                             /* File size in bytes. */
     unsigned magic;                           /* Magic number. */
 
-    bool is_dir;
+    bool is_dir;                               /* whether it is a directory */
     /* MODIFY THE FOLLOWING IF VARIABLES IN THIS STRUCTURE ARE MODIFIED */
     /* To meet BLOCK_SECTOR_SIZE size requirement. */
     char unused[BLOCK_SECTOR_SIZE

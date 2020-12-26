@@ -488,6 +488,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->executing_file = NULL;
   t->exit_status = -1;
 
+  /* directory initialized to be NULL */
   t->directory = NULL;
 }
 
