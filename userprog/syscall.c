@@ -159,13 +159,13 @@ is_valid_addr (const void *uaddr)
 bool 
 check_the_string (void *str)
 {
-  while(is_valid_addr(str))
+  while(is_valid_addr (str))
     {
       if (*(char *)str == '\0')
         break;
       (char*)str++;
     }
-  if (is_valid_addr(str))
+  if (is_valid_addr (str))
     return true;
   else
     return false;
@@ -183,7 +183,7 @@ syscall_handler (struct intr_frame *f)
   
   /* System call number is saved in stack pointer (f->esp).
      See section 3.5.2 in the doc for details. */
-  int syscall_num = *(int*)(f->esp);
+  int syscall_num = *(int*) (f->esp);
   int wrapper_return;
   /* Check whether correct syscall num is correct */
   if (syscall_num < 0 || syscall_num >= 20)
@@ -305,10 +305,10 @@ syscall_open (const char *file)
   opened_file->file = to_open;
   opened_file->fd = allocate_fd (); /* Allocate file descriptor */
 
-  struct inode *inode = file_get_inode(opened_file->file);
-  if(inode != NULL && inode_is_dir(inode))
+  struct inode *inode = file_get_inode (opened_file->file);
+  if (inode != NULL && inode_is_dir (inode))
   {
-    opened_file->directory = dir_open(inode_reopen(inode));
+    opened_file->directory = dir_open (inode_reopen (inode));
   }
   else
   {
@@ -450,7 +450,7 @@ syscall_chdir(const char* file_name)
   }
 
   dir_close (thread_current()->directory);
-  thread_current()->directory = dir;
+  thread_current ()->directory = dir;
   lock_release (&file_lock);
 
   return true;
@@ -458,12 +458,12 @@ syscall_chdir(const char* file_name)
 
 /* create a new direactory */
 bool
-syscall_mkdir(const char* file_name)
+syscall_mkdir (const char* file_name)
 {
   int result;
 
   lock_acquire (&file_lock);
-  result = filesys_create(file_name, 0, true);
+  result = filesys_create (file_name, 0, true);
   lock_release (&file_lock);
 
   return result;
@@ -471,32 +471,32 @@ syscall_mkdir(const char* file_name)
 
 /* read the direactory entry from file descriptor stores the null-terminated file name in name */
 bool
-syscall_readdir(int fd, char* name)
+syscall_readdir (int fd, char* name)
 {
   int result;
 
   lock_acquire (&file_lock);
-  struct fd_entry* fd_entry = get_fd_entry(fd);
+  struct fd_entry* fd_entry = get_fd_entry (fd);
   if (fd_entry == NULL)
   {
     lock_release (&file_lock);
     return false;
   }
 
-  struct inode* inode = file_get_inode(fd_entry->file);
+  struct inode* inode = file_get_inode (fd_entry->file);
   if (inode == NULL)
   {
     lock_release (&file_lock);
     return false;
   }
 
-  if (!inode_is_dir(inode))
+  if (!inode_is_dir (inode))
   {
     lock_release (&file_lock);
     return false;
   }
 
-  result = dir_readdir(fd_entry->directory, name);
+  result = dir_readdir (fd_entry->directory, name);
   lock_release (&file_lock);
 
   return result;
@@ -504,12 +504,12 @@ syscall_readdir(int fd, char* name)
 
 /* check whether fd represent a directory */
 bool
-syscall_isdir(int fd)
+syscall_isdir (int fd)
 {
   bool result;
 
   lock_acquire (&file_lock);
-  result = inode_is_dir(file_get_inode(get_fd_entry(fd)->file));
+  result = inode_is_dir (file_get_inode (get_fd_entry (fd)->file));
   lock_release (&file_lock);
 
   return result;
@@ -522,7 +522,8 @@ syscall_inumber (int fd)
   int result;
 
   lock_acquire (&file_lock);
-  result = (int) inode_get_inumber(file_get_inode(get_fd_entry(fd)->file));
+  result = (int) inode_get_inumber (
+      file_get_inode (get_fd_entry (fd)->file));
   lock_release (&file_lock);
 
   return result;
@@ -686,9 +687,9 @@ syscall_read_wrapper (struct intr_frame *f)
   void *buffer = *(char**)(f->esp + 8);
   unsigned length = *((unsigned*)(f->esp + 12));
 
-  if (buffer == NULL || !is_valid_addr(buffer + length ))
+  if (buffer == NULL || !is_valid_addr (buffer + length ))
   {
-    terminate_program(-1);
+    terminate_program (-1);
   }
 
   /* Write the return value */

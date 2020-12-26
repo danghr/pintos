@@ -18,6 +18,6 @@ struct file *filesys_open (const char *name);
 bool filesys_remove (const char *name);
 
 /* split the path */
-void split_path(const char* path, char *dir, char *name);
+void split_path (const char* path, char *dir, char *name);
 
 #endif /* filesys/filesys.h */

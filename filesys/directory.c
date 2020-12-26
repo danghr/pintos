@@ -29,10 +29,10 @@ dir_create (block_sector_t sector, size_t entry_cnt)
 {
   if (inode_create (sector, entry_cnt * sizeof (struct dir_entry), true))
   {
-    struct dir* directory = dir_open(inode_open(sector));
+    struct dir* directory = dir_open(inode_open (sector));
     struct dir_entry dir_entry;
     dir_entry.inode_sector = sector;
-    inode_write_at(directory->inode, &dir_entry, sizeof(dir_entry), 0);
+    inode_write_at (directory->inode, &dir_entry, sizeof (dir_entry), 0);
     dir_close (directory);
     return true;
   }
@@ -48,7 +48,7 @@ dir_open (struct inode *inode)
   if (inode != NULL && dir != NULL)
     {
       dir->inode = inode;
-      dir->pos = sizeof(struct dir_entry);
+      dir->pos = sizeof (struct dir_entry);
       return dir;
     }
   else
@@ -72,24 +72,24 @@ dir_open_path (const char* path)
 {
   struct dir* result;
   
-  int path_length = strlen(path);
-  char* path_copy = (char*)malloc(sizeof(char) * (path_length + 1));
-  memcpy (path_copy, path, sizeof(char) * (path_length + 1));
+  int path_length = strlen (path);
+  char* path_copy = (char*) malloc (sizeof(char) * (path_length + 1));
+  memcpy (path_copy, path, sizeof (char) * (path_length + 1));
   /* open the start position of directory */
   if (path_copy[0] == '/')
   {
-    result = dir_open_root();
+    result = dir_open_root ();
   }
   else
   {
-    struct thread* current_thread = thread_current();
+    struct thread* current_thread = thread_current ();
     if (current_thread->directory == NULL)
     {
       result = dir_open_root();
     }
     else
     {
-      result = dir_reopen(current_thread->directory);
+      result = dir_reopen (current_thread->directory);
     }
   }
 
@@ -100,33 +100,33 @@ dir_open_path (const char* path)
         token = strtok_r (NULL, "/", &save_ptr))
   {
     struct inode* inode = NULL;
-    if (!dir_lookup(result, token, &inode))
+    if (!dir_lookup (result, token, &inode))
     {
       goto null_output;
     }
 
-    struct dir* next_dir = dir_open(inode);
+    struct dir* next_dir = dir_open (inode);
     if (next_dir == NULL)
     {
       goto null_output;
     }
 
-    dir_close(result);
+    dir_close (result);
     result = next_dir;
   }
 
   /* if the result inode is removed, return NULL */
-  if (inode_is_removed(dir_get_inode(result)))
+  if (inode_is_removed (dir_get_inode (result)))
   {  
     goto null_output;
   }
 
-  free(path_copy);
+  free (path_copy);
   return result;
 
 null_output:
-  dir_close(result);
-  free(path_copy);
+  dir_close (result);
+  free (path_copy);
   return NULL;  
 };
 
@@ -198,15 +198,15 @@ dir_lookup (const struct dir *dir, const char *name,
   ASSERT (dir != NULL);
   ASSERT (name != NULL);
 
-  if (!strcmp(name, ".."))
+  if (!strcmp (name, ".."))
   {
     struct dir_entry parent_dir_entry;
-    inode_read_at(dir->inode, &parent_dir_entry, sizeof(parent_dir_entry), 0);
-    *inode = inode_open(parent_dir_entry.inode_sector);
+    inode_read_at (dir->inode, &parent_dir_entry, sizeof (parent_dir_entry), 0);
+    *inode = inode_open (parent_dir_entry.inode_sector);
   }
   else if (!strcmp(name, "."))
   {
-    *inode = inode_reopen(dir->inode);
+    *inode = inode_reopen (dir->inode);
   }
   else if (lookup (dir, name, &e, NULL))
   {
@@ -264,11 +264,12 @@ dir_add (struct dir *dir, const char *name, block_sector_t inode_sector, bool is
 
   if (is_dir)
   {
-    struct inode* child_inode = inode_open(e.inode_sector);
+    struct inode* child_inode = inode_open( e.inode_sector);
     struct dir_entry parent_dir_entry;
     parent_dir_entry.in_use = true;
-    parent_dir_entry.inode_sector = inode_get_inumber(dir->inode);
-    success = inode_write_at (child_inode, &parent_dir_entry, sizeof(parent_dir_entry), 0) == sizeof(parent_dir_entry);
+    parent_dir_entry.inode_sector = inode_get_inumber (dir->inode);
+    success = inode_write_at (child_inode, &parent_dir_entry, sizeof 
+        (parent_dir_entry), 0) == sizeof (parent_dir_entry);
   }
 
  done:
@@ -295,15 +296,17 @@ dir_remove (struct dir *dir, const char *name)
 
   /* Open inode. */
   inode = inode_open (e.inode_sector);
-  if (inode == NULL || inode_is_removed(inode))
+  if (inode == NULL || inode_is_removed (inode))
     goto done;
 
-  if (inode_is_dir(inode))
+  if (inode_is_dir (inode))
   {
     struct dir_entry dir_entry;
 
-    int dir_entry_size = sizeof(dir_entry);
-    for (int iterator = sizeof(dir_entry); inode_read_at (inode, &dir_entry, dir_entry_size, iterator) == dir_entry_size; iterator += dir_entry_size)
+    int dir_entry_size = sizeof (dir_entry);
+    for (int iterator = sizeof (dir_entry);
+      inode_read_at (inode, &dir_entry, dir_entry_size, iterator)
+       == dir_entry_size; iterator += dir_entry_size)
     {
       if (dir_entry.in_use)
       {

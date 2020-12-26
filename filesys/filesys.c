@@ -50,11 +50,11 @@ bool
 filesys_create (const char *name, off_t initial_size, bool is_dir) 
 {
   block_sector_t inode_sector = 0;
-  int name_length = strlen(name);
+  int name_length = strlen (name);
   char directory[name_length];
   char file_name[name_length];
 
-  split_path(name, directory, file_name);
+  split_path (name, directory, file_name);
 
   struct dir *dir = dir_open_path (directory);
   bool success = (dir != NULL
@@ -75,7 +75,7 @@ filesys_create (const char *name, off_t initial_size, bool is_dir)
 struct file *
 filesys_open (const char *name)
 {
-  int name_length = strlen(name);
+  int name_length = strlen (name);
   if (name_length == 0)
   {
     return NULL;
@@ -83,13 +83,13 @@ filesys_open (const char *name)
   char directory[name_length + 1];
   char file_name[name_length + 1];
 
-  split_path(name, directory, file_name);
+  split_path (name, directory, file_name);
   struct dir *dir = dir_open_path (directory);
   struct inode *inode = NULL;
   
   if (dir != NULL)
-  {
-    if (strlen(file_name) > 0)
+  { 
+    if (strlen (file_name) > 0)
     {
       dir_lookup (dir, file_name, &inode);
       dir_close (dir);
@@ -100,7 +100,7 @@ filesys_open (const char *name)
     }
   }
 
-  if (inode == NULL || inode_is_removed(inode))
+  if (inode == NULL || inode_is_removed (inode))
   {
     return NULL;
   }
@@ -115,11 +115,11 @@ filesys_open (const char *name)
 bool
 filesys_remove (const char *name) 
 {
-  int name_length = strlen(name);
+  int name_length = strlen (name);
   char directory[name_length];
   char file_name[name_length];
 
-  split_path(name, directory, file_name);
+  split_path (name, directory, file_name);
   struct dir *dir = dir_open_path (directory);
   bool success = dir != NULL && dir_remove (dir, file_name);
   dir_close (dir); 
@@ -143,14 +143,16 @@ do_format (void)
 void
 split_path(const char* path, char *dir, char *name)
 {
-  int path_length = strlen(path);
-  char* path_copy = (char*)malloc(sizeof(char) * (path_length + 1));
-  memcpy (path_copy, path, sizeof(char) * (path_length + 1));
+  int path_length = strlen (path);
+  char* path_copy = (char*) malloc 
+    (sizeof (char) * (path_length + 1));
+  memcpy (path_copy, path, 
+    sizeof (char) * (path_length + 1));
 
   char* dir_iter = dir;
   if (dir_iter && path_copy[0] == '/')
   {
-    memcpy (dir_iter, "/", sizeof(char));
+    memcpy (dir_iter, "/", sizeof (char));
     dir_iter ++;
   }
 
@@ -163,9 +165,9 @@ split_path(const char* path, char *dir, char *name)
       int last_length = strlen(last_token);
       if (dir_iter && last_length > 0)
       {
-        memcpy (dir_iter, last_token, sizeof(char) * last_length);
+        memcpy (dir_iter, last_token, sizeof (char) * last_length);
         dir_iter += last_length;
-        memcpy (dir_iter, "/", sizeof(char));
+        memcpy (dir_iter, "/", sizeof (char));
         dir_iter ++;
       }
 
@@ -177,6 +179,6 @@ split_path(const char* path, char *dir, char *name)
     memcpy (dir_iter, "\0", sizeof(char));
   }
 
-  memcpy(name, last_token, sizeof(char) * (strlen(last_token) + 1));
+  memcpy (name, last_token, sizeof (char) * (strlen (last_token) + 1));
   free (path_copy);
 }
