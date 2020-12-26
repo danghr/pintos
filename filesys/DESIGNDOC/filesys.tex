@@ -169,25 +169,79 @@ struct inode_double_indirect_block_sector
             \subsubsection{Copy here the declaration of each new or changed `\texttt{struct}' or `\texttt{struct}' member, global or static variable, `\texttt{typedef}', or enumeration. Identify the purpose of each in 25 words or less. }
     
                 \begin{itemize}
-                    \item In file \texttt{}
+                    \item In file \texttt{inode.c}
 \begin{verbatim}
+struct inode
+{
+
+...
+
+    /* Used to distinguish the directory and file. */
+    bool is_dir;
+    
+...
+
+    /* To meet BLOCK_SECTOR_SIZE size 
+       requirement. */
+    char unused[BLOCK_SECTOR_SIZE
+                - sizeof (block_sector_t) * (DIRECT_BLOCK + 2)  
+                - sizeof (off_t)              
+                - sizeof (unsigned)           
+                - sizeof (bool)              
+                ];
+};
 \end{verbatim}
                 \end{itemize}
 
+ \begin{itemize}
+                    \item In file \texttt{threads.h}
+\begin{verbatim}
+struct thread
+{
+
+...
+
+/* Store the directory opened by current thread. */
+struct dir* directory;
+};
+
+\end{verbatim}
+                    \end{itemize}
+\begin{itemize}
+    \item in file \texttt{syscall.c}
+\begin{verbatim}
+struct fd_entry
+{
+
+...
+
+  /* Store the directory which holds the file. */
+  struct dir *directory;
+};
+\end{verbatim}
+\end{itemize}
         \subsection{Algorithms}
 
             \subsubsection{Describe your code for traversing a user-specified path.  How do traversals of absolute and relative paths differ? } 
+            
+                We split the path and store the splited words. We use the words which are name of files or directories to go through untill we find the file. When we handle the relative paths, we use the first sector of the directory to store the parent directory and we can solve the path include \texttt{../} .When we handle the path include \texttt{.}, we will reopen the directory.
+                
         
         \subsection{Synchronization}
 
-            \subsubsection{How do you prevent races on directory entries?  For example, only one of two simultaneous attempts to remove a single file should succeed, as should only one of two simultaneous attempts to create a file with the same name, and so on. }
+            \subsubsection{How do you prevent races on directory entries?  For example, only one of two simultaneous attempts to remove a single file should succeed, as should only one of two simultaneous attempts to create a file with the same name, and so on. } 
+
+	We will use a lock to make the remove, create operations atomic. And for a \texttt{inode} we  use \texttt{removed} to check whether the file has already been removed.
+
 
             \subsubsection{Does your implementation allow a directory to be removed if it is open by a process or if it is in use as a process's current working directory?  If so, what happens to that process's future file system operations?  If not, how do you prevent it? }
         
+	Not allowed. We will check every file in the directory whether the file is in use or not. As long as there is one file is in use we cannot remove the directory.
         \subsection{Rationale}
 
             \subsubsection{Explain why you chose to represent the current directory of a process the way you did. }
-    
+
+    We store the directory in the \texttt{thread} struct, and  we only change the variable when we change the directory.
     \section{Buffer Cache}
 
         \label{Buffer Cache}
