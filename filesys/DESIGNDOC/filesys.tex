@@ -112,6 +112,7 @@ struct inode_disk
             * (DIRECT_BLOCK + 2)
         - sizeof (off_t)
         - sizeof (unsigned)
+        ...
         ];
 };
 
@@ -174,19 +175,18 @@ struct inode_double_indirect_block_sector
 struct inode
 {
 
-...
+    ...
 
-    /* Used to distinguish the directory and file. */
+    /* Used to distinguish the directory and 
+       file. */
     bool is_dir;
     
-...
+    ...
 
     /* To meet BLOCK_SECTOR_SIZE size 
        requirement. */
     char unused[BLOCK_SECTOR_SIZE
-                - sizeof (block_sector_t) * (DIRECT_BLOCK + 2)  
-                - sizeof (off_t)              
-                - sizeof (unsigned)           
+                ...
                 - sizeof (bool)              
                 ];
 };
@@ -199,10 +199,11 @@ struct inode
 struct thread
 {
 
-...
+    ...
 
-/* Store the directory opened by current thread. */
-struct dir* directory;
+    /* Store the directory opened by current
+       thread. */
+    struct dir* directory;
 };
 
 \end{verbatim}
@@ -213,10 +214,11 @@ struct dir* directory;
 struct fd_entry
 {
 
-...
+    ...
 
-  /* Store the directory which holds the file. */
-  struct dir *directory;
+    /* Store the directory which holds the 
+       file. */
+    struct dir *directory;
 };
 \end{verbatim}
 \end{itemize}
@@ -224,24 +226,26 @@ struct fd_entry
 
             \subsubsection{Describe your code for traversing a user-specified path.  How do traversals of absolute and relative paths differ? } 
             
-                We split the path and store the splited words. We use the words which are name of files or directories to go through untill we find the file. When we handle the relative paths, we use the first sector of the directory to store the parent directory and we can solve the path include \texttt{../} .When we handle the path include \texttt{.}, we will reopen the directory.
+                We split the path and store the splited words. We use the words which are name of files or directories to go through until we find the file. When we handle the relative paths, we use the first sector of the directory to store the parent directory and we can solve the path include "\texttt{../}". When we handle the path include "\texttt{.}", we will reopen the directory.
                 
         
         \subsection{Synchronization}
 
             \subsubsection{How do you prevent races on directory entries?  For example, only one of two simultaneous attempts to remove a single file should succeed, as should only one of two simultaneous attempts to create a file with the same name, and so on. } 
 
-	We will use a lock to make the remove, create operations atomic. And for a \texttt{inode} we  use \texttt{removed} to check whether the file has already been removed.
+	            We will use a lock to make the remove, create operations atomic. And for a \texttt{inode} we  use \texttt{removed} to check whether the file has already been removed.
 
 
             \subsubsection{Does your implementation allow a directory to be removed if it is open by a process or if it is in use as a process's current working directory?  If so, what happens to that process's future file system operations?  If not, how do you prevent it? }
         
-	Not allowed. We will check every file in the directory whether the file is in use or not. As long as there is one file is in use we cannot remove the directory.
+                Not allowed. We will check every file in the directory whether the file is in use or not. As long as there is one file is in use we cannot remove the directory.
+
         \subsection{Rationale}
 
             \subsubsection{Explain why you chose to represent the current directory of a process the way you did. }
 
-    We store the directory in the \texttt{thread} struct, and  we only change the variable when we change the directory.
+                We store the directory in the \texttt{thread} struct, and  we only change the variable when we change the directory.
+
     \section{Buffer Cache}
 
         \label{Buffer Cache}
@@ -278,9 +282,8 @@ struct buffer_cache_entry
 };
 
 /* Buffer cache entries */
-static struct 
-buffer_cache_entry 
-buffer_cache[BUFFER_CACHE_SIZE];
+static struct buffer_cache_entry 
+    buffer_cache[BUFFER_CACHE_SIZE];
 /* Lock for buffer cache operations */
 static struct lock buffer_cache_lock;
 /* Flag that the buffer cache is initialzed */
@@ -291,7 +294,7 @@ int64_t buffer_cache_last_flush = 30;
 /* Last sector read, 0 for no need to read 
    ahead */
 block_sector_t 
-buffer_cache_last_sector_loaded = 0;
+    buffer_cache_last_sector_loaded = 0;
 \end{verbatim}
             \end{itemize}
 
@@ -331,13 +334,23 @@ buffer_cache_last_sector_loaded = 0;
 
         \subsubsection*{In your opinion, was this assignment, or any one of the three problems in it, too easy or too hard? Did it take too long or too little time? }
 
+            It is mostly okay in this project, but some of the directory persistance tests requires much time, as 
+
         \subsubsection*{Did you find that working on a particular part of the assignment gave you greater insight into some aspect of OS design? }
+
+            All the three parts offer us the basic view of a file system, which greatly improves our understanding of that. Especially, the directory and indexed file tells us about the basic design structure of an inode-based file system. 
 
         \subsubsection*{Is there some particular fact or hint we should give students in future quarters to help them solve the problems? Conversely, did you find any of our guidance to be misleading? }
 
+            Not yet. 
+
         \subsubsection*{Do you have any suggestions for the TAs to more effectively assist students, either for future quarters or the remaining projects? }
 
+            Not yet. 
+
         \subsubsection*{Any other comments? }
+
+            Not yet. 
     
     \section*{Contributors}
 
@@ -353,16 +366,16 @@ buffer_cache_last_sector_loaded = 0;
                     \cline{2-5}
                     & Debugging & \checkmark & \checkmark & \checkmark \\
                     \cline{2-5}
-                    & Design Document & \checkmark & \checkmark & \checkmark \\
+                    & Design Document & & \checkmark & \\
                 \hline
                 \multirow{4}{*}{\makecell{Task 2 \\ Subdirector-\\ies}} 
-                    & Concept & \checkmark & \checkmark & \checkmark \\
+                    & Concept & \checkmark & & \checkmark \\
                     \cline{2-5}
-                    & Implementation & \checkmark & \checkmark & \checkmark \\
+                    & Implementation & \checkmark & & \checkmark \\
                     \cline{2-5}
                     & Debugging & \checkmark & \checkmark & \checkmark \\
                     \cline{2-5}
-                    & Design Document & \checkmark & \checkmark & \checkmark \\
+                    & Design Document & \checkmark & & \checkmark \\
                 \hline
                 \multirow{4}{*}{\makecell{Task 3 \\ Buffer \\ Cache}} 
                     & Concept & & \checkmark & \\
