@@ -77,9 +77,9 @@ filesys_open (const char *name)
 {
   int name_length = strlen (name);
   if (name_length == 0)
-  {
-    return NULL;
-  }
+    {
+      return NULL;
+    }
   char directory[name_length + 1];
   char file_name[name_length + 1];
 
@@ -88,22 +88,22 @@ filesys_open (const char *name)
   struct inode *inode = NULL;
   
   if (dir != NULL)
-  { 
-    if (strlen (file_name) > 0)
-    {
-      dir_lookup (dir, file_name, &inode);
-      dir_close (dir);
+    { 
+      if (strlen (file_name) > 0)
+        {
+          dir_lookup (dir, file_name, &inode);
+          dir_close (dir);
+        }
+      else
+        {
+          inode = dir_get_inode (dir);
+        }
     }
-    else
-    {
-      inode = dir_get_inode (dir);
-    }
-  }
 
   if (inode == NULL || inode_is_removed (inode))
-  {
-    return NULL;
-  }
+    {
+      return NULL;
+    }
   
   return file_open (inode);
 }
@@ -151,33 +151,33 @@ split_path(const char* path, char *dir, char *name)
 
   char* dir_iter = dir;
   if (dir_iter && path_copy[0] == '/')
-  {
-    memcpy (dir_iter, "/", sizeof (char));
-    dir_iter ++;
-  }
+    {
+      memcpy (dir_iter, "/", sizeof (char));
+      dir_iter ++;
+    }
 
   char *token, *save_ptr;
   char *last_token = "";
 
   for (token = strtok_r (path_copy, "/", &save_ptr); token != NULL;
-        token = strtok_r (NULL, "/", &save_ptr))
+       token = strtok_r (NULL, "/", &save_ptr))
     {
       int last_length = strlen(last_token);
       if (dir_iter && last_length > 0)
-      {
-        memcpy (dir_iter, last_token, sizeof (char) * last_length);
-        dir_iter += last_length;
-        memcpy (dir_iter, "/", sizeof (char));
-        dir_iter ++;
-      }
+        {
+          memcpy (dir_iter, last_token, sizeof (char) * last_length);
+          dir_iter += last_length;
+          memcpy (dir_iter, "/", sizeof (char));
+          dir_iter ++;
+        }
 
       last_token = token;
     }
 
   if (dir_iter)
-  {
-    memcpy (dir_iter, "\0", sizeof(char));
-  }
+    {
+      memcpy (dir_iter, "\0", sizeof(char));
+    }
 
   memcpy (name, last_token, sizeof (char) * (strlen (last_token) + 1));
   free (path_copy);

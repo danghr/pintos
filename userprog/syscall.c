@@ -307,13 +307,13 @@ syscall_open (const char *file)
 
   struct inode *inode = file_get_inode (opened_file->file);
   if (inode != NULL && inode_is_dir (inode))
-  {
-    opened_file->directory = dir_open (inode_reopen (inode));
-  }
+    {
+      opened_file->directory = dir_open (inode_reopen (inode));
+    }
   else
-  {
-    opened_file->directory = NULL;
-  }
+    {
+      opened_file->directory = NULL;
+    }
 
   /* Push into the list of opened files by current thread */
   list_push_back (&(thread_current ()->opened_files), 
@@ -438,16 +438,17 @@ syscall_close (int fd)
   return 0;
 }
 
-/* change the directory owned by current thread to another */
+/* Change the directory owned by current thread to another. */
 bool
 syscall_chdir(const char* file_name)
 {
   lock_acquire (&file_lock);
   struct dir *dir = dir_open_path (file_name);
 
-  if(dir == NULL) {
-    return false;
-  }
+  if(dir == NULL)
+    {
+      return false;
+    }
 
   dir_close (thread_current()->directory);
   thread_current ()->directory = dir;
@@ -469,7 +470,8 @@ syscall_mkdir (const char* file_name)
   return result;
 }
 
-/* read the direactory entry from file descriptor stores the null-terminated file name in name */
+/* Read the direactory entry from file descriptor stores the 
+   null-terminated file name in name. */
 bool
 syscall_readdir (int fd, char* name)
 {
@@ -478,23 +480,23 @@ syscall_readdir (int fd, char* name)
   lock_acquire (&file_lock);
   struct fd_entry* fd_entry = get_fd_entry (fd);
   if (fd_entry == NULL)
-  {
-    lock_release (&file_lock);
-    return false;
-  }
+    {
+      lock_release (&file_lock);
+      return false;
+    }
 
   struct inode* inode = file_get_inode (fd_entry->file);
   if (inode == NULL)
-  {
-    lock_release (&file_lock);
-    return false;
-  }
+    {
+      lock_release (&file_lock);
+      return false;
+    }
 
   if (!inode_is_dir (inode))
-  {
-    lock_release (&file_lock);
-    return false;
-  }
+    {
+      lock_release (&file_lock);
+      return false;
+    }
 
   result = dir_readdir (fd_entry->directory, name);
   lock_release (&file_lock);
@@ -502,7 +504,7 @@ syscall_readdir (int fd, char* name)
   return result;
 }
 
-/* check whether fd represent a directory */
+/* Check whether FD represent a directory. */
 bool
 syscall_isdir (int fd)
 {
@@ -515,7 +517,7 @@ syscall_isdir (int fd)
   return result;
 }
 
-/* get the inode number of fd */
+/* Get the inode number of FD. */
 int
 syscall_inumber (int fd)
 {
